@@ -298,16 +298,16 @@ const CSS = `
   *,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
 
   :root{
-    --bl:#2563eb; --ind:#4f46e5; --vio:#7c3aed;
-    --bl-d:rgba(37,99,235,.14); --ind-d:rgba(79,70,229,.14);
-    --g:rgba(255,255,255,.05); --gb:rgba(255,255,255,.09); --gh:rgba(255,255,255,.08);
-    --bg:#040810; --bg2:#080f1f; --bg3:#0d1629; --bg4:#111d35;
-    --t1:#f0f6ff; --t2:#8ba3c7; --t3:#3d5275;
-    --ok:#10b981; --err:#ef4444; --warn:#f59e0b; --info:#3b82f6;
+    --bl:#2563eb; --ind:#4338ca; --vio:#6d28d9;
+    --bl-d:rgba(37,99,235,.12); --ind-d:rgba(67,56,202,.12);
+    --g:rgba(255,255,255,.04); --gb:rgba(255,255,255,.08); --gh:rgba(255,255,255,.07);
+    --bg:#05090f; --bg2:#0a1020; --bg3:#0e1628; --bg4:#121e30;
+    --t1:#e8f0fc; --t2:#7a95b8; --t3:#374f6a;
+    --ok:#059669; --err:#dc2626; --warn:#d97706; --info:#2563eb;
     --r8:8px; --r12:12px; --r16:16px; --r20:20px; --r24:24px;
-    --nav-h:60px; --mob-nav:64px;
-    --shadow:0 4px 24px rgba(0,0,0,.4);
-    --shadow-lg:0 8px 48px rgba(0,0,0,.5);
+    --nav-h:58px; --mob-nav:62px;
+    --shadow:0 2px 16px rgba(0,0,0,.35);
+    --shadow-lg:0 6px 40px rgba(0,0,0,.45);
   }
 
   /* ── AÇIK MOD ── */
@@ -349,19 +349,27 @@ const CSS = `
   /* ── ÜSTTE NAV ── */
   .topnav{
     position:fixed;top:0;left:0;right:0;z-index:600;
-    height:var(--nav-h);padding:0 1.25rem;
-    background:rgba(4,8,16,.88);backdrop-filter:blur(20px);
+    height:var(--nav-h);padding:0 1rem;
+    background:rgba(4,8,16,.92);backdrop-filter:blur(20px);
     border-bottom:1px solid var(--gb);
-    display:flex;align-items:center;gap:.75rem;
+    display:flex;align-items:center;gap:.5rem;
+    overflow:hidden;
   }
-  .nav-logo{font-weight:800;font-size:1.125rem;letter-spacing:-.03em;display:flex;align-items:center;gap:.5rem;}
-  .nav-logo-dot{width:8px;height:8px;border-radius:50%;background:linear-gradient(135deg,var(--bl),var(--ind));}
+  @media(min-width:640px){.topnav{padding:0 1.5rem;gap:.75rem;}}
+  .nav-logo{font-weight:800;font-size:1rem;letter-spacing:-.03em;display:flex;align-items:center;gap:.375rem;white-space:nowrap;flex-shrink:0;}
+  @media(min-width:640px){.nav-logo{font-size:1.125rem;gap:.5rem;}}
+  .nav-logo-dot{width:7px;height:7px;border-radius:50%;background:linear-gradient(135deg,var(--bl),var(--ind));flex-shrink:0;}
   .nav-logo-text{background:linear-gradient(135deg,var(--bl),var(--ind));-webkit-background-clip:text;-webkit-text-fill-color:transparent;}
-  .nav-spacer{flex:1;}
-  .nav-user{display:flex;align-items:center;gap:.625rem;font-size:.875rem;}
-  .nav-name{color:var(--t2);max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+  .nav-spacer{flex:1;min-width:0;}
+  .nav-user{display:flex;align-items:center;gap:.375rem;font-size:.875rem;flex-shrink:0;}
+  @media(min-width:640px){.nav-user{gap:.625rem;}}
+  .nav-name{color:var(--t2);max-width:90px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none;}
+  @media(min-width:640px){.nav-name{display:block;max-width:120px;}}
   .nav-phone{color:var(--t3);font-size:.75rem;display:none;}
-  @media(min-width:640px){.nav-phone{display:block;}}
+  @media(min-width:900px){.nav-phone{display:block;}}
+  /* Mobilde gizlenecekler */
+  .nav-hide-mob{display:none;}
+  @media(min-width:640px){.nav-hide-mob{display:flex;align-items:center;}}
 
   /* ── ROL ROZETLERİ ── */
   .rbadge{padding:.25rem .625rem;border-radius:99px;font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
@@ -429,7 +437,7 @@ const CSS = `
   .page-sub{color:var(--t2);font-size:.9375rem;margin-top:.25rem;line-height:1.5;}
 
   /* ── KARTLAR ── */
-  .card{background:var(--g);border:1px solid var(--gb);border-radius:var(--r16);padding:1.5rem;}
+  .card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.5rem;}
   .card-sm{padding:.875rem;}
   .card-title{font-weight:700;font-size:.9375rem;margin-bottom:.875rem;display:flex;align-items:center;gap:.5rem;}
   .card-hover{transition:all .22s;cursor:pointer;}
@@ -515,7 +523,7 @@ const CSS = `
   .review-card{background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);padding:1rem 1.125rem;margin-bottom:.75rem;}
   .review-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem;}
   .auth-right{flex:1;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
-  .auth-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r24);padding:2rem;width:100%;max-width:400px;}
+  .auth-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r24);padding:2rem;width:100%;max-width:420px;box-shadow:var(--shadow-lg);}
   .auth-logo{font-weight:800;font-size:1.375rem;text-align:center;margin-bottom:1.75rem;letter-spacing:-.03em;}
   .auth-tabs{display:flex;background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);margin-bottom:1.5rem;overflow:hidden;}
   .auth-tab{flex:1;padding:.5rem;font-size:.875rem;cursor:pointer;background:none;border:none;color:var(--t2);font-family:'Outfit',sans-serif;transition:all .15s;text-align:center;font-weight:600;}
@@ -535,13 +543,11 @@ const CSS = `
   .deco-stat-l{font-size:.75rem;color:var(--t3);margin-top:.2rem;text-align:center;}
 
   /* ── USTA KARTLARI ── */
-  .masters-grid{display:grid;grid-template-columns:1fr;gap:.875rem;}
+  .masters-grid{display:grid;grid-template-columns:1fr;gap:1rem;}
   @media(min-width:480px){.masters-grid{grid-template-columns:repeat(2,1fr);}}
   @media(min-width:900px){.masters-grid{grid-template-columns:repeat(3,1fr);}}
-  .master-card{background:var(--g);border:1px solid var(--gb);border-radius:var(--r16);padding:1.125rem;cursor:pointer;transition:all .22s;position:relative;overflow:hidden;}
-  .master-card::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,70,229,.06),transparent 60%);opacity:0;transition:opacity .22s;pointer-events:none;}
-  .master-card:hover{border-color:rgba(79,70,229,.35);transform:translateY(-2px);box-shadow:0 8px 32px rgba(0,0,0,.35);}
-  .master-card:hover::before{opacity:1;}
+  .master-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s;position:relative;}
+  .master-card:hover{border-color:rgba(37,99,235,.4);transform:translateY(-2px);box-shadow:0 6px 28px rgba(0,0,0,.3);}
   .avatar{border-radius:var(--r12);background:linear-gradient(135deg,var(--bl),var(--ind));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;}
   .av-lg{width:52px;height:52px;font-size:1rem;}
   .av-md{width:44px;height:44px;font-size:.875rem;}
@@ -636,20 +642,25 @@ const CSS = `
   .auth-mob-top{display:none;text-align:center;padding:1.5rem 1rem .75rem;}
   @media(max-width:639px){
     .auth-mob-top{display:block;}
-    .auth-card{padding:1.5rem;}
-    .content{padding:.75rem;}
-    .modal-body{padding:.875rem;}
-    .modal-head{padding:.75rem .875rem;}
-    .modal-foot{padding:.625rem .875rem;}
-    .page-title{font-size:1.25rem;}
+    .auth-card{padding:1.25rem;}
+    .auth-right{padding:1rem;}
+    .content{padding:1rem;}
+    .modal-body{padding:.875rem 1rem;}
+    .modal-head{padding:.75rem 1rem;}
+    .modal-foot{padding:.625rem 1rem;}
+    .page-title{font-size:1.125rem;}
+    .page-sub{font-size:.875rem;}
     .card{padding:1rem;}
     .stat-grid{grid-template-columns:1fr 1fr;}
     table{font-size:.75rem;}
     table th,table td{padding:.375rem .5rem;}
     .masters-grid{grid-template-columns:1fr;}
     .btn{font-size:.8125rem;}
-    .nav-name{max-width:80px;}
-    .modal{margin:.5rem;border-radius:12px;}
+    .modal{border-radius:16px 16px 0 0;}
+    .sidebar-section,.s-item{font-size:.8125rem;}
+    .fr2{grid-template-columns:1fr;}
+    .tbl-wrap{font-size:.75rem;}
+    .footer-grid{gap:1.5rem;}
     .auth-outer{flex-direction:column;}
     .auth-deco{display:none;}
     .auth-right{padding:1rem;}
@@ -952,9 +963,11 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
   };
   const doRegister = () => {
     if (!rN || !rE || !rPh || !rPw || !rSec) { setRErr("Tüm alanları doldurun."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rE)) { setRErr("Geçerli bir e-posta adresi girin. (örn: isim@gmail.com)"); return; }
+    if (!/^(05\d{9}|5\d{9})$/.test(rPh.replace(/\s/g, ""))) { setRErr("Geçerli bir telefon numarası girin. (örn: 05xx xxx xx xx)"); return; }
     if (rPw !== rPw2) { setRErr("Şifreler eşleşmiyor."); return; }
     if (rPw.length < 6) { setRErr("Şifre en az 6 karakter olmalı."); return; }
-    if (users.find(u => u.email === rE)) { setRErr("Bu e-posta zaten kayıtlı."); return; }
+    if (users.find(u => u.email === rE.trim().toLowerCase())) { setRErr("Bu e-posta zaten kayıtlı."); return; }
     const nu: AppUser = { id: "u_" + uid(), name: rN.trim(), email: rE.trim(), phone: rPh.trim(), password: rPw, securityAnswer: rSec.trim().toLowerCase(), role: rRole, createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
     supabase?.insert("app_users", userToDB(nu)).catch(console.error);
     setUsers(prev => { const n = [...prev, nu]; saveLS(LS.users, n); return n; });
@@ -2368,20 +2381,20 @@ export default function App() {
           <div className="nav-logo-dot"/>
           <span>OtoTamirci<span className="nav-logo-text">Online</span></span>
         </div>
-        <button className="about-btn" onClick={() => setShowAbout(true)}>Hakkımızda</button>
+        <button className="about-btn nav-hide-mob" onClick={() => setShowAbout(true)}>Hakkımızda</button>
         <div className="nav-spacer"/>
         <div className="nav-user">
-          <button className="theme-btn" onClick={toggleTheme} title="Tema değiştir">
+          <button className="theme-btn nav-hide-mob" onClick={toggleTheme} title="Tema değiştir">
             {theme === "dark" ? "☀️ Açık" : "🌙 Koyu"}
           </button>
-          <div className={`db-indicator ${isOnline ? "db-online" : "db-offline"}`}>
+          <div className={`db-indicator nav-hide-mob ${isOnline ? "db-online" : "db-offline"}`}>
             {isOnline ? <Wifi size={10}/> : <WifiOff size={10}/>}
             {isOnline ? "Supabase" : "LocalDB"}
           </div>
-          <span className={`rbadge r-${currentUser.role}`}>{roleLabel[currentUser.role]}</span>
+          <span className={`rbadge r-${currentUser.role} nav-hide-mob`}>{roleLabel[currentUser.role]}</span>
           <span className="nav-name">{currentUser.name}</span>
           <span className="nav-phone">{currentUser.phone}</span>
-          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentUser(null)}><LogOut size={12}/>Çıkış</button>
+          <button className="btn btn-ghost btn-sm" onClick={() => setCurrentUser(null)} style={{ padding: ".3125rem .625rem" }}><LogOut size={14}/><span className="nav-hide-mob" style={{ display: "none" }}>Çıkış</span></button>
         </div>
       </nav>
 
