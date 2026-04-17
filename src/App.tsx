@@ -575,7 +575,9 @@ const CSS = `
   /* ── ÖNİZLEME BANDI ── */
   .preview-exit{margin-left:auto;}
 
+  .auth-mob-top{display:none;text-align:center;padding:1.5rem 1rem .75rem;}
   @media(max-width:639px){
+    .auth-mob-top{display:block;}
     .auth-card{padding:1.5rem;}
     .content{padding:.75rem;}
     .modal-body{padding:.875rem;}
@@ -877,6 +879,14 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
   return (
     <div className="auth-outer">
       <style>{CSS}</style>
+      {/* Mobil üst başlık */}
+      <div className="auth-mob-top">
+        <div style={{ fontWeight: 800, fontSize: "1.375rem", letterSpacing: "-.03em" }}><span className="g-text">OtoTamirci</span>Online</div>
+        <div style={{ fontSize: ".8125rem", color: "var(--t3)", marginTop: ".25rem" }}>Yakın ve Tanıdık Usta Bulma Platformu</div>
+        <div style={{ display: "flex", gap: ".75rem", marginTop: ".625rem", flexWrap: "wrap" }}>
+          {["Güvenilir usta","Şeffaf fiyat","Admin onaylı"].map(f => <span key={f} style={{ fontSize: ".75rem", background: "rgba(37,99,235,.12)", border: "1px solid rgba(37,99,235,.25)", borderRadius: 99, padding: ".2rem .625rem", color: "#60a5fa" }}>{f}</span>)}
+        </div>
+      </div>
       {/* Sol dekorasyon */}
       <div className="auth-deco">
         <div className="auth-deco-bg"/>
@@ -1046,6 +1056,21 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
 
             {!existing && selected.length > 0 && (<>
               <div className="divider"/>
+              <div className="card-title" style={{ color: "#34d399" }}>🛒 Sepetim ({selected.length} hizmet)</div>
+              <div style={{ background: "rgba(16,185,129,.06)", border: "1px solid rgba(16,185,129,.2)", borderRadius: 10, padding: ".75rem", marginBottom: "1rem" }}>
+                {selected.map(s => (
+                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".375rem", fontSize: ".875rem" }}>
+                    <span style={{ color: "var(--t1)" }}>{s.name}</span>
+                    <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+                      <span style={{ color: "#34d399", fontWeight: 700 }}>{fmtTL(s.price)}</span>
+                      <button onClick={() => toggle(s)} style={{ background: "rgba(239,68,68,.15)", border: "1px solid rgba(239,68,68,.3)", borderRadius: 6, color: "#f87171", cursor: "pointer", padding: "2px 6px", fontSize: ".75rem" }}>✕</button>
+                    </div>
+                  </div>
+                ))}
+                <div style={{ borderTop: "1px solid rgba(16,185,129,.2)", marginTop: ".5rem", paddingTop: ".5rem", display: "flex", justifyContent: "space-between", fontWeight: 800 }}>
+                  <span>Toplam</span><span className="g-text" style={{ fontSize: "1.125rem" }}>{fmtTL(total)}</span>
+                </div>
+              </div>
               <div className="card-title">Randevu Zamanı</div>
               <div className="fr2" style={{ marginBottom: ".875rem" }}>
                 <div className="fg"><label className="fl">Tarih</label><input type="date" className="fi" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split("T")[0]}/></div>
