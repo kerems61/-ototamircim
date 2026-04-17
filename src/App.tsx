@@ -190,7 +190,7 @@ const SECURITY_Q = "İlk arabanızın markası nedir?";
 
 // ──────────────────────────────────────────────
 // İLETİŞİM BİLGİLERİ — Buradan kolayca değiştir
-const CONTACT_PHONE = "(0312) 555 12 34";
+const CONTACT_PHONE = "0545 902 92 41";
 const CONTACT_EMAIL = "ototamircim134@gmail.com";
 const CONTACT_ADDRESS = "Ankara, Türkiye";
 // ──────────────────────────────────────────────
