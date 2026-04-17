@@ -187,6 +187,13 @@ const DISTRICTS = ["Tümü","Çankaya","Keçiören","Mamak","Sincan","Etimesgut"
 const TIME_SLOTS = ["08:00-10:00","10:00-12:00","12:00-14:00","14:00-16:00","16:00-18:00","18:00-20:00"];
 const DAYS = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
 const SECURITY_Q = "İlk arabanızın markası nedir?";
+
+// ──────────────────────────────────────────────
+// İLETİŞİM BİLGİLERİ — Buradan kolayca değiştir
+const CONTACT_PHONE = "(0312) 555 12 34";
+const CONTACT_EMAIL = "ototamircim134@gmail.com";
+const CONTACT_ADDRESS = "Ankara, Türkiye";
+// ──────────────────────────────────────────────
 const LS = {
   users: "oto_users", masters: "oto_masters", appointments: "oto_appointments"
 };
@@ -383,14 +390,14 @@ const CSS = `
   .mob-nav-dot{position:absolute;top:.375rem;right:.875rem;width:6px;height:6px;border-radius:50%;background:var(--bl);}
 
   /* ── İÇERİK ── */
-  .content{flex:1;padding:1.25rem;overflow-y:auto;max-width:100%;}
-  @media(min-width:768px){.content{padding:2rem;}}
-  .page-header{margin-bottom:1.5rem;}
+  .content{flex:1;padding:1.5rem;overflow-y:auto;max-width:100%;}
+  @media(min-width:768px){.content{padding:2.25rem 2.5rem;}}
+  .page-header{margin-bottom:1.75rem;}
   .page-title{font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;letter-spacing:-.03em;}
   .page-sub{color:var(--t2);font-size:.9375rem;margin-top:.25rem;line-height:1.5;}
 
   /* ── KARTLAR ── */
-  .card{background:var(--g);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;}
+  .card{background:var(--g);border:1px solid var(--gb);border-radius:var(--r16);padding:1.5rem;}
   .card-sm{padding:.875rem;}
   .card-title{font-weight:700;font-size:.9375rem;margin-bottom:.875rem;display:flex;align-items:center;gap:.5rem;}
   .card-hover{transition:all .22s;cursor:pointer;}
@@ -400,7 +407,7 @@ const CSS = `
   .card-glow::before{content:'';position:absolute;inset:0;background:linear-gradient(135deg,rgba(79,70,229,.06),transparent 60%);opacity:0;transition:opacity .22s;pointer-events:none;}
 
   /* ── FORM ── */
-  .fg{margin-bottom:.875rem;}
+  .fg{margin-bottom:1.125rem;}
   .fl{display:block;font-size:.8125rem;color:var(--t2);font-weight:600;margin-bottom:.375rem;letter-spacing:.01em;}
   .fi{width:100%;background:rgba(255,255,255,.04);border:1px solid var(--gb);border-radius:var(--r8);padding:.5625rem .875rem;color:var(--t1);font-size:.9rem;font-family:'Outfit',sans-serif;outline:none;transition:border-color .18s;-webkit-appearance:none;}
   .fi:focus{border-color:rgba(79,70,229,.55);background:rgba(79,70,229,.06);}
@@ -1146,11 +1153,17 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   const pendingPay = myAppts.filter(a => a.status === "approved").length;
 
   const getLoc = () => {
+    if (!navigator.geolocation) {
+      setUserLoc(ANKARA_CENTER);
+      toast("Tarayıcı konum desteklemiyor, Ankara merkezi baz alındı", "warn");
+      return;
+    }
     setLocLoading(true);
-    navigator.geolocation?.getCurrentPosition(
+    navigator.geolocation.getCurrentPosition(
       p => { setUserLoc({ lat: p.coords.latitude, lng: p.coords.longitude }); setLocLoading(false); toast("Konumunuz alındı", "ok"); },
-      () => { setUserLoc(ANKARA_CENTER); setLocLoading(false); toast("Konum alınamadı, Ankara merkezi baz alındı", "warn"); }
-    ) ?? (() => { setUserLoc(ANKARA_CENTER); setLocLoading(false); })();
+      () => { setUserLoc(ANKARA_CENTER); setLocLoading(false); toast("Konum alınamadı, Ankara merkezi baz alındı", "warn"); },
+      { enableHighAccuracy: true, timeout: 10000 }
+    );
   };
 
   const navItems = [
@@ -1407,10 +1420,19 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
               <div className="fg"><label className="fl">Hakkımda</label><textarea className="fi" rows={3} style={{ resize: "none" }} value={bio} onChange={e => setBio(e.target.value)} placeholder="Kendinizi kısaca tanıtın..."/></div>
               <div className="fg">
                 <label className="fl">Konum</label>
-                <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
-                  <input className="fi" type="number" step="0.0001" placeholder="Enlem" value={masterLat} onChange={e => setMasterLat(Number(e.target.value))} style={{ flex: 1, minWidth: 120 }}/>
-                  <input className="fi" type="number" step="0.0001" placeholder="Boylam" value={masterLng} onChange={e => setMasterLng(Number(e.target.value))} style={{ flex: 1, minWidth: 120 }}/>
-                  <button className="btn btn-ghost btn-sm" onClick={getMyLocation}><Navigation size={13}/>Konumumu Al</button>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
+                  <button className="btn btn-ghost" onClick={getMyLocation} style={{ alignSelf: "flex-start", gap: ".5rem" }}>
+                    <Navigation size={15}/> GPS ile Konumumu Al
+                  </button>
+                  {masterLat !== ANKARA_CENTER.lat || masterLng !== ANKARA_CENTER.lng ? (
+                    <div style={{ fontSize: ".8125rem", color: "var(--ok)", display: "flex", alignItems: "center", gap: ".375rem", padding: ".5rem .75rem", background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.2)", borderRadius: "var(--r8)" }}>
+                      <MapPin size={13}/> Konum ayarlı: {masterLat.toFixed(4)}, {masterLng.toFixed(4)}
+                    </div>
+                  ) : (
+                    <div style={{ fontSize: ".8125rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".375rem" }}>
+                      <MapPin size={13}/> Henüz konum alınmadı — butona tıklayın
+                    </div>
+                  )}
                 </div>
               </div>
               <div style={{ display: "flex", justifyContent: "flex-end" }}><button className="btn btn-primary" onClick={saveProfile}><Save size={13}/>Kaydet</button></div>
@@ -1833,31 +1855,130 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 // ══════════════════════════════════════════════════════════════════
 // FOOTER
 // ══════════════════════════════════════════════════════════════════
+type FooterModal = "nasil" | "ustaol" | "guvenlik" | "sss" | null;
+
+const FOOTER_CONTENT: Record<Exclude<FooterModal, null>, { title: string; body: React.ReactNode }> = {
+  nasil: {
+    title: "Nasıl Çalışır?",
+    body: (
+      <ol style={{ paddingLeft: "1.25rem", lineHeight: 2, color: "var(--t2)", fontSize: ".9rem" }}>
+        <li><strong style={{ color: "var(--t1)" }}>Kayıt Ol</strong> — Ücretsiz müşteri hesabı oluşturun.</li>
+        <li><strong style={{ color: "var(--t1)" }}>Usta Seç</strong> — Semtinize ve ihtiyacınıza göre onaylı ustalar arasından seçim yapın.</li>
+        <li><strong style={{ color: "var(--t1)" }}>Randevu Al</strong> — Uygun gün ve saati seçin, notunuzu ekleyin.</li>
+        <li><strong style={{ color: "var(--t1)" }}>Onay Bekle</strong> — Usta randevuyu onayladığında size bildirim gelir.</li>
+        <li><strong style={{ color: "var(--t1)" }}>Kolay Ödeme</strong> — İş tamamlandıktan sonra güvenli ödeme yapın.</li>
+      </ol>
+    ),
+  },
+  ustaol: {
+    title: "Usta Ol",
+    body: (
+      <div style={{ color: "var(--t2)", fontSize: ".9rem", lineHeight: 1.8 }}>
+        <p style={{ marginBottom: "1rem" }}>Platformumuza usta olarak katılmak için:</p>
+        <ol style={{ paddingLeft: "1.25rem", lineHeight: 2 }}>
+          <li>Sağ üstteki <strong style={{ color: "var(--t1)" }}>Kayıt Ol</strong> butonuna tıklayın.</li>
+          <li>Bilgilerinizi doldurun ve kaydınızı tamamlayın.</li>
+          <li>Yönetici hesabınızı onayladıktan sonra aktif olursunuz.</li>
+        </ol>
+        <p style={{ marginTop: "1rem", color: "var(--t3)", fontSize: ".8125rem" }}>Onay için iletişim: {CONTACT_EMAIL}</p>
+      </div>
+    ),
+  },
+  guvenlik: {
+    title: "Güvenlik",
+    body: (
+      <div style={{ color: "var(--t2)", fontSize: ".9rem", lineHeight: 1.8 }}>
+        <div style={{ display: "flex", flexDirection: "column", gap: ".75rem" }}>
+          {[
+            ["Onaylı Ustalar", "Tüm ustalar kimlik ve referans kontrolünden geçer."],
+            ["Güvenli Ödeme", "Ödemeler yalnızca iş tamamlandıktan sonra alınır."],
+            ["SSL Şifreleme", "Tüm veriler 256-bit SSL ile şifrelenir."],
+            ["Gizlilik", "Kişisel bilgileriniz üçüncü taraflarla paylaşılmaz."],
+          ].map(([title, desc]) => (
+            <div key={title} style={{ display: "flex", gap: ".625rem", alignItems: "flex-start" }}>
+              <CheckCircle size={15} style={{ color: "var(--ok)", marginTop: ".15rem", flexShrink: 0 }}/>
+              <div><strong style={{ color: "var(--t1)" }}>{title}</strong><br/>{desc}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    ),
+  },
+  sss: {
+    title: "Sık Sorulan Sorular",
+    body: (
+      <div style={{ color: "var(--t2)", fontSize: ".875rem", lineHeight: 1.75 }}>
+        {[
+          ["Hizmet ücretsiz mi?", "Müşteri kaydı ve usta arama tamamen ücretsizdir."],
+          ["Ustayı nasıl değerlendirebilirim?", "İş tamamlandıktan sonra puan ve yorum bırakabilirsiniz."],
+          ["Randevuyu iptal edebilir miyim?", "Onaylanmamış randevular iptal edilebilir. Onaylananlar için ustanızla iletişime geçin."],
+          ["Hangi bölgelerde hizmet var?", "Şu an için Ankara ilçelerinde hizmet verilmektedir."],
+        ].map(([q, a]) => (
+          <div key={q as string} style={{ marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1px solid var(--gb)" }}>
+            <div style={{ fontWeight: 600, color: "var(--t1)", marginBottom: ".25rem" }}>{q}</div>
+            <div>{a}</div>
+          </div>
+        ))}
+      </div>
+    ),
+  },
+};
+
 function Footer() {
+  const [modal, setModal] = React.useState<FooterModal>(null);
+  const info = modal ? FOOTER_CONTENT[modal] : null;
+
+  const links: { label: string; key: FooterModal }[] = [
+    { label: "Nasıl Çalışır?", key: "nasil" },
+    { label: "Usta Ol", key: "ustaol" },
+    { label: "Güvenlik", key: "guvenlik" },
+    { label: "SSS", key: "sss" },
+  ];
+
   return (
-    <footer className="footer">
-      <div className="footer-grid">
-        <div>
-          <div className="footer-logo"><span className="g-text">OtoTamirci</span>Online</div>
-          <div style={{ fontSize: ".75rem", color: "var(--t3)", marginBottom: ".75rem", letterSpacing: ".06em" }}>ototamircimonline.com</div>
-          <p className="footer-desc">Ankara'nın güvenilir usta platformu. Yakın ve tanıdık usta, şeffaf fiyat, emanet ödeme.</p>
+    <>
+      {info && (
+        <div className="overlay" onClick={() => setModal(null)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+            <div className="modal-head">
+              <h3>{info.title}</h3>
+              <button className="close-btn" onClick={() => setModal(null)}><X size={16}/></button>
+            </div>
+            <div className="modal-body">{info.body}</div>
+          </div>
         </div>
-        <div>
-          <div className="footer-h">Platform</div>
-          {["Nasıl Çalışır?","Usta Ol","Güvenlik","SSS"].map(l => <div key={l} className="footer-link" style={{ cursor: "pointer" }}>{l}</div>)}
+      )}
+      <footer className="footer">
+        <div className="footer-grid">
+          <div>
+            <div className="footer-logo"><span className="g-text">OtoTamirci</span>Online</div>
+            <div style={{ fontSize: ".75rem", color: "var(--t3)", marginBottom: ".75rem", letterSpacing: ".06em" }}>ototamircimonline.com</div>
+            <p className="footer-desc">Ankara'nın güvenilir usta platformu. Yakın ve tanıdık usta, şeffaf fiyat, kolay ödeme.</p>
+          </div>
+          <div>
+            <div className="footer-h">Platform</div>
+            {links.map(l => (
+              <div key={l.key} className="footer-link" style={{ cursor: "pointer", transition: "color .15s" }}
+                onClick={() => setModal(l.key)}
+                onMouseEnter={e => (e.currentTarget.style.color = "var(--t1)")}
+                onMouseLeave={e => (e.currentTarget.style.color = "")}>
+                <ChevronRight size={12}/>{l.label}
+              </div>
+            ))}
+          </div>
+          <div>
+            <div className="footer-h">İletişim</div>
+            <a href={`tel:${CONTACT_PHONE.replace(/\s|\(|\)/g, "")}`} className="footer-link" style={{ textDecoration: "none", cursor: "pointer" }}><Phone size={14}/>{CONTACT_PHONE}</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="footer-link" style={{ textDecoration: "none", cursor: "pointer" }}><Mail size={14}/>{CONTACT_EMAIL}</a>
+            <div className="footer-link"><MapPin size={14}/>{CONTACT_ADDRESS}</div>
+          </div>
         </div>
-        <div>
-          <div className="footer-h">İletişim</div>
-          <div className="footer-link"><Phone size={14}/>(0312) 555 12 34</div>
-          <div className="footer-link"><Mail size={14}/>ototamircim134@gmail.com</div>
-          <div className="footer-link"><MapPin size={14}/>Ankara, Türkiye</div>
+        <div className="footer-bottom">
+          <span>© 2025 OtoTamirciOnline.com — Tüm hakları saklıdır.</span>
+          <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}><Shield size={13} style={{ color: "var(--bl)" }}/>SSL Güvenli</div>
         </div>
-      </div>
-      <div className="footer-bottom">
-        <span>© 2025 OtoTamirciOnline.com — Tüm hakları saklıdır.</span>
-        <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}><Shield size={13} style={{ color: "var(--bl)" }}/>SSL Güvenli</div>
-      </div>
-    </footer>
+      </footer>
+    </>
   );
 }
 
