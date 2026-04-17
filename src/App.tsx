@@ -1125,19 +1125,35 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
     <div className="overlay" onClick={onClose}>
       <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxHeight: "92dvh" }}>
         <div className="modal-head">
-          <div style={{ display: "flex", gap: ".875rem", alignItems: "center" }}>
-            <div className="avatar av-lg">{master.avatar}</div>
-            <div>
+          <div style={{ display: "flex", gap: ".875rem", alignItems: "center", minWidth: 0, flex: 1 }}>
+            <div className="avatar av-lg" style={{ flexShrink: 0 }}>{master.avatar}</div>
+            <div style={{ minWidth: 0 }}>
               <div style={{ fontWeight: 700, fontSize: "1rem" }}>{master.name}</div>
               <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{master.specialty} · {master.district}</div>
-              <div style={{ display: "flex", gap: ".75rem", fontSize: ".8125rem", marginTop: ".2rem", flexWrap: "wrap" }}>
+              <div style={{ display: "flex", gap: ".625rem", fontSize: ".8125rem", marginTop: ".25rem", flexWrap: "wrap", alignItems: "center" }}>
                 <span style={{ color: "#fbbf24" }}>⭐ {master.rating || "Yeni"}</span>
                 <span style={{ color: "var(--t2)" }}>{master.completedJobs} iş</span>
-                <span style={{ color: "var(--t2)", display: "flex", alignItems: "center", gap: ".25rem" }}><Phone size={11}/>{master.phone}</span>
+                <span style={{ color: "var(--t2)", display: "flex", alignItems: "center", gap: ".2rem" }}><Phone size={11}/>{master.phone}</span>
+              </div>
+              <div style={{ display: "flex", gap: ".375rem", marginTop: ".375rem", flexWrap: "wrap" }}>
+                <a
+                  href={`https://maps.google.com/?q=${master.lat},${master.lng}`}
+                  target="_blank" rel="noopener noreferrer"
+                  style={{ display:"inline-flex", alignItems:"center", gap:".3rem", fontSize:".75rem", background:"rgba(37,99,235,.12)", border:"1px solid rgba(37,99,235,.3)", borderRadius:6, padding:".2rem .6rem", color:"#60a5fa", textDecoration:"none", fontWeight:600 }}
+                  onClick={e => e.stopPropagation()}
+                >
+                  <MapPin size={11}/>Google Maps'te Aç
+                </a>
+                <button
+                  style={{ display:"inline-flex", alignItems:"center", gap:".3rem", fontSize:".75rem", background:"rgba(16,185,129,.1)", border:"1px solid rgba(16,185,129,.28)", borderRadius:6, padding:".2rem .6rem", color:"var(--ok)", cursor:"pointer", fontWeight:600 }}
+                  onClick={e => { e.stopPropagation(); navigator.clipboard.writeText(`https://maps.google.com/?q=${master.lat},${master.lng}`).then(() => toast("Konum linki kopyalandı!", "ok")); }}
+                >
+                  <Navigation size={11}/>Konumu Kopyala
+                </button>
               </div>
             </div>
           </div>
-          <button className="close-btn" onClick={onClose}><X size={14}/></button>
+          <button className="close-btn" style={{ flexShrink: 0 }} onClick={onClose}><X size={14}/></button>
         </div>
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: "column" as const }}>
