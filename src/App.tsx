@@ -179,6 +179,18 @@ interface Appointment {
 
 interface ToastItem { id: number; msg: string; type: "ok" | "err" | "info" | "warn"; }
 
+interface Review {
+  id: string;
+  customerId: string;
+  customerName: string;
+  masterId: string;
+  masterName: string;
+  rating: number;
+  comment: string;
+  appointmentId: string;
+  createdAt: string;
+}
+
 // ══════════════════════════════════════════════════════════════════
 // SABİTLER
 // ══════════════════════════════════════════════════════════════════
@@ -195,7 +207,7 @@ const CONTACT_EMAIL = "ototamircim134@gmail.com";
 const CONTACT_ADDRESS = "Ankara, Türkiye";
 // ──────────────────────────────────────────────
 const LS = {
-  users: "oto_users", masters: "oto_masters", appointments: "oto_appointments"
+  users: "oto_users", masters: "oto_masters", appointments: "oto_appointments", reviews: "oto_reviews"
 };
 
 // Sadece admin — ustalar admin panelinden eklenecek
@@ -298,9 +310,29 @@ const CSS = `
     --shadow-lg:0 8px 48px rgba(0,0,0,.5);
   }
 
+  /* ── AÇIK MOD ── */
+  body.light-mode{
+    --g:rgba(0,0,0,.04); --gb:rgba(0,0,0,.09); --gh:rgba(0,0,0,.07);
+    --bg:#f8fafc; --bg2:#f1f5f9; --bg3:#e8edf3; --bg4:#ffffff;
+    --t1:#0d1b2e; --t2:#456080; --t3:#8aa0bc;
+    --shadow:0 4px 24px rgba(0,0,0,.1); --shadow-lg:0 8px 48px rgba(0,0,0,.16);
+  }
+  body.light-mode .topnav{background:rgba(248,250,252,.94);border-bottom-color:rgba(0,0,0,.1);}
+  body.light-mode .sidebar{background:var(--bg2);border-right-color:var(--gb);}
+  body.light-mode .mob-nav{background:rgba(248,250,252,.96);border-top-color:rgba(0,0,0,.1);}
+  body.light-mode .auth-deco{background:linear-gradient(145deg,#dde4ed,#c8d6e8);}
+  body.light-mode .footer{background:var(--bg2);border-top-color:var(--gb);}
+  body.light-mode .master-card{background:var(--bg4);}
+  body.light-mode .card{background:var(--bg4);}
+  body.light-mode .fi{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.12);}
+  body.light-mode .fi:focus{background:rgba(37,99,235,.05);}
+
   html{font-size:16px;scroll-behavior:smooth;}
   body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
   #root{min-height:100dvh;}
+  /* mobile overflow fix */
+  *{-webkit-overflow-scrolling:touch;}
+  p,div,span,a,h1,h2,h3,h4,h5,button,label{overflow-wrap:break-word;word-break:break-word;max-width:100%;}
   h1,h2,h3,h4,h5{font-family:'Outfit',sans-serif;letter-spacing:-.02em;}
   code,pre{font-family:'JetBrains Mono',monospace;}
 
@@ -463,6 +495,25 @@ const CSS = `
   .auth-deco-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,rgba(37,99,235,.12),transparent 65%),radial-gradient(ellipse 60% 50% at 70% 70%,rgba(79,70,229,.1),transparent 60%);pointer-events:none;}
   .gear{position:absolute;border-radius:50%;border:2px solid rgba(37,99,235,.14);animation:spinG linear infinite;}
   @keyframes spinG{from{transform:rotate(0)}to{transform:rotate(360deg)}}
+  @keyframes pulse{0%,100%{opacity:.5;transform:scale(1)}50%{opacity:1;transform:scale(1.4)}}
+  @keyframes floatY{0%,100%{transform:translateY(0)}50%{transform:translateY(-8px)}}
+
+  /* ── TEMA TOGGLE ── */
+  .theme-btn{background:var(--g);border:1px solid var(--gb);border-radius:99px;padding:.25rem .625rem;cursor:pointer;font-size:.75rem;color:var(--t2);font-family:'Outfit',sans-serif;font-weight:600;transition:all .18s;display:flex;align-items:center;gap:.35rem;}
+  .theme-btn:hover{color:var(--t1);background:var(--gh);}
+
+  /* ── HAKKIMIZDA BTN ── */
+  .about-btn{background:none;border:none;font-family:'Outfit',sans-serif;font-size:.875rem;font-weight:600;color:var(--t2);cursor:pointer;padding:.375rem .75rem;border-radius:var(--r8);transition:all .15s;}
+  .about-btn:hover{color:var(--t1);background:var(--g);}
+
+  /* ── YILDIZ ── */
+  .stars{display:flex;gap:2px;align-items:center;}
+  .star-btn{background:none;border:none;cursor:pointer;padding:1px;transition:transform .12s;}
+  .star-btn:hover{transform:scale(1.2);}
+
+  /* ── REVIEW CARD ── */
+  .review-card{background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);padding:1rem 1.125rem;margin-bottom:.75rem;}
+  .review-meta{display:flex;align-items:center;justify-content:space-between;margin-bottom:.5rem;flex-wrap:wrap;gap:.5rem;}
   .auth-right{flex:1;display:flex;align-items:center;justify-content:center;padding:1.5rem;}
   .auth-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r24);padding:2rem;width:100%;max-width:400px;}
   .auth-logo{font-weight:800;font-size:1.375rem;text-align:center;margin-bottom:1.75rem;letter-spacing:-.03em;}
@@ -850,6 +901,41 @@ function PaymentModal({ appt, onClose, onSuccess }: {
 }
 
 // ══════════════════════════════════════════════════════════════════
+// ARABA İLLÜSTRASYONU
+// ══════════════════════════════════════════════════════════════════
+function CarHero() {
+  return (
+    <div style={{ position: "relative", display: "flex", justifyContent: "center", margin: "1.5rem 0 .5rem", animation: "floatY 4s ease-in-out infinite" }}>
+      <svg width="260" height="110" viewBox="0 0 280 120" fill="none" xmlns="http://www.w3.org/2000/svg" style={{ filter: "drop-shadow(0 8px 24px rgba(37,99,235,.35))" }}>
+        <ellipse cx="140" cy="108" rx="95" ry="9" fill="rgba(37,99,235,.18)"/>
+        <path d="M25 72 L25 93 Q25 102 37 102 L243 102 Q255 102 255 93 L255 72 Z" fill="#132044" stroke="rgba(79,70,229,.5)" strokeWidth="1.5"/>
+        <path d="M72 72 L93 36 Q97 30 105 30 L175 30 Q183 30 187 36 L208 72 Z" fill="#1a2d5c" stroke="rgba(79,70,229,.4)" strokeWidth="1.5"/>
+        <path d="M77 70 L86 70 L104 40 L104 40 Q107 36 112 36 L126 36 L126 70 Z" fill="rgba(96,165,250,.15)" stroke="rgba(96,165,250,.35)" strokeWidth=".75"/>
+        <rect x="130" y="36" width="22" height="32" rx="2" fill="rgba(96,165,250,.15)" stroke="rgba(96,165,250,.35)" strokeWidth=".75"/>
+        <path d="M156 70 L156 36 L175 36 Q181 36 184 40 L205 70 Z" fill="rgba(96,165,250,.15)" stroke="rgba(96,165,250,.35)" strokeWidth=".75"/>
+        <rect x="244" y="74" width="16" height="8" rx="3" fill="rgba(251,191,36,.85)"/>
+        <rect x="244" y="84" width="10" height="5" rx="2" fill="rgba(251,191,36,.4)"/>
+        <path d="M255 76 L264 78 L264 90 L255 92" fill="none" stroke="rgba(79,70,229,.5)" strokeWidth="1.5"/>
+        {[0,1,2].map(i=><line key={i} x1="257" y1={80+i*4} x2="263" y2={81+i*4} stroke="rgba(255,255,255,.18)" strokeWidth=".8"/>)}
+        <rect x="20" y="74" width="11" height="7" rx="2" fill="rgba(239,68,68,.75)"/>
+        <circle cx="200" cy="102" r="20" fill="#0c1428" stroke="rgba(79,70,229,.6)" strokeWidth="2"/>
+        <circle cx="200" cy="102" r="11" fill="none" stroke="rgba(99,102,241,.55)" strokeWidth="3"/>
+        <circle cx="200" cy="102" r="4" fill="rgba(99,102,241,.7)"/>
+        <circle cx="80" cy="102" r="20" fill="#0c1428" stroke="rgba(79,70,229,.6)" strokeWidth="2"/>
+        <circle cx="80" cy="102" r="11" fill="none" stroke="rgba(99,102,241,.55)" strokeWidth="3"/>
+        <circle cx="80" cy="102" r="4" fill="rgba(99,102,241,.7)"/>
+        <line x1="140" y1="72" x2="140" y2="101" stroke="rgba(255,255,255,.06)" strokeWidth="1.2"/>
+        <rect x="107" y="87" width="16" height="3.5" rx="1.75" fill="rgba(255,255,255,.22)"/>
+        <rect x="157" y="87" width="16" height="3.5" rx="1.75" fill="rgba(255,255,255,.22)"/>
+        <rect x="220" y="100" width="14" height="3" rx="1.5" fill="rgba(255,255,255,.12)"/>
+      </svg>
+      <div style={{ position:"absolute", top:"15%", left:"5%", width:7, height:7, borderRadius:"50%", background:"rgba(37,99,235,.7)", boxShadow:"0 0 12px 4px rgba(37,99,235,.4)", animation:"pulse 2s ease-in-out infinite" }}/>
+      <div style={{ position:"absolute", top:"25%", right:"8%", width:5, height:5, borderRadius:"50%", background:"rgba(99,102,241,.6)", boxShadow:"0 0 9px 3px rgba(99,102,241,.3)", animation:"pulse 2.8s ease-in-out infinite" }}/>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
 // AUTH EKRANI
 // ══════════════════════════════════════════════════════════════════
 function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void }) {
@@ -904,9 +990,10 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
         <div className="deco-content">
           <div className="deco-logo"><span className="g-text">OtoTamirci</span>Online</div>
           <div className="deco-domain">ototamircimonline.com</div>
+          <CarHero/>
           <h2 className="deco-h">Yakın ve Tanıdık<br/>Usta Bulma Platformu</h2>
           <p className="deco-p">Ankara'nın onaylı, referanslı ustalarını tek platformda bulun. Güvenli öde, güvenle tamir ettir.</p>
-          {["Güvenilir usta bulma garantisi", "Şeffaf işçilik ücretleri", "Emanet ödeme sistemi", "Admin onaylı her usta"].map(f => (
+          {["Güvenilir usta bulma garantisi", "Şeffaf işçilik ücretleri", "Kolay ödeme sistemi", "Admin onaylı her usta"].map(f => (
             <div key={f} className="deco-feat"><div className="deco-dot"/>{f}</div>
           ))}
           <div className="deco-stats">
@@ -1126,14 +1213,55 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
 }
 
 // ══════════════════════════════════════════════════════════════════
+// DEĞERLENDİRME FORMU
+// ══════════════════════════════════════════════════════════════════
+function ReviewForm({ appt, user, onSubmit }: { appt: Appointment; user: AppUser; onSubmit: (r: Review) => void }) {
+  const [rating, setRating] = useState(0);
+  const [hover, setHover] = useState(0);
+  const [comment, setComment] = useState("");
+  const [sent, setSent] = useState(false);
+
+  const submit = () => {
+    if (!rating) return;
+    onSubmit({ id: "rv_" + uid(), customerId: user.id, customerName: user.name, masterId: appt.masterId, masterName: appt.masterName, rating, comment: comment.trim(), appointmentId: appt.id, createdAt: new Date().toISOString() });
+    setSent(true);
+  };
+
+  if (sent) return (
+    <div className="review-card" style={{ borderColor: "rgba(16,185,129,.3)", background: "rgba(16,185,129,.06)" }}>
+      <div style={{ display: "flex", alignItems: "center", gap: ".5rem", color: "var(--ok)", fontWeight: 600, fontSize: ".875rem" }}>
+        <CheckCircle size={15}/> {appt.masterName} için değerlendirmeniz gönderildi
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="review-card">
+      <div style={{ fontWeight: 600, marginBottom: ".625rem", fontSize: ".9rem" }}>{appt.masterName} — {appt.date}</div>
+      <div style={{ display: "flex", gap: ".25rem", marginBottom: ".75rem" }}>
+        {[1,2,3,4,5].map(i => (
+          <button key={i} className="star-btn" onMouseEnter={() => setHover(i)} onMouseLeave={() => setHover(0)} onClick={() => setRating(i)}>
+            <Star size={22} fill={(hover||rating)>=i ? "#f59e0b" : "none"} stroke={(hover||rating)>=i ? "#f59e0b" : "rgba(255,255,255,.25)"}/>
+          </button>
+        ))}
+        {rating > 0 && <span style={{ fontSize: ".8125rem", color: "var(--t2)", marginLeft: ".375rem", alignSelf: "center" }}>{["","Kötü","İdare eder","İyi","Çok iyi","Mükemmel"][rating]}</span>}
+      </div>
+      <textarea className="fi" rows={2} style={{ resize: "none", marginBottom: ".625rem" }} placeholder="Yorumunuz (isteğe bağlı)..." value={comment} onChange={e => setComment(e.target.value)}/>
+      <button className="btn btn-primary btn-sm" onClick={submit} disabled={!rating}><Star size={12}/>Değerlendir</button>
+    </div>
+  );
+}
+
+// ══════════════════════════════════════════════════════════════════
 // MÜŞTERİ SAYFASI
 // ══════════════════════════════════════════════════════════════════
-function CustomerPage({ masters, user, setUsers, appointments, setAppointments, toast }: {
+function CustomerPage({ masters, user, setUsers, appointments, setAppointments, reviews, setReviews, toast }: {
   masters: Master[]; user: AppUser; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   appointments: Appointment[]; setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
+  reviews: Review[]; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void;
 }) {
-  type T = "find" | "appointments" | "profile";
+  type T = "find" | "appointments" | "reviews" | "profile";
   const [tab, setTab] = useState<T>("find");
   const [view, setView] = useState<"list" | "map">("list");
   const [district, setDistrict] = useState("Tümü");
@@ -1166,9 +1294,14 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
     );
   };
 
+  const myReviews = reviews.filter(r => r.customerId === user.id);
+  const reviewedApptIds = new Set(myReviews.map(r => r.appointmentId));
+  const pendingReview = myAppts.filter(a => a.status === "completed" && !reviewedApptIds.has(a.id)).length;
+
   const navItems = [
     { id: "find" as T, icon: <Search size={20}/>, label: "Usta Bul" },
     { id: "appointments" as T, icon: <Clock size={20}/>, label: "Randevular", badge: pendingPay },
+    { id: "reviews" as T, icon: <Star size={20}/>, label: "Görüşler", badge: pendingReview },
     { id: "profile" as T, icon: <User size={20}/>, label: "Profil" },
   ];
 
@@ -1269,6 +1402,38 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
             ))}
           </>)}
 
+          {/* GÖRÜŞLER */}
+          {tab === "reviews" && (<>
+            <div className="page-header">
+              <div className="page-title">Görüş ve Öneriler</div>
+              <div className="page-sub">Tamamlanan randevularınızı değerlendirin</div>
+            </div>
+            {/* Değerlendirilecekler */}
+            {myAppts.filter(a => a.status === "completed" && !reviewedApptIds.has(a.id)).length > 0 && (<>
+              <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem", color: "var(--warn)", display: "flex", alignItems: "center", gap: ".5rem" }}>
+                <Star size={14}/> Değerlendirme bekleyen randevular
+              </div>
+              {myAppts.filter(a => a.status === "completed" && !reviewedApptIds.has(a.id)).map(a => (
+                <ReviewForm key={a.id} appt={a} user={user} onSubmit={rv => { const n = [...reviews, rv]; setReviews(n); saveLS(LS.reviews, n); toast("Değerlendirme eklendi", "ok"); }}/>
+              ))}
+              <div className="divider"/>
+            </>)}
+            {/* Geçmiş Değerlendirmeler */}
+            <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem" }}>Gönderdiğim Değerlendirmeler</div>
+            {myReviews.length === 0 ? (
+              <div className="empty-state"><Star size={32}/><h3>Henüz değerlendirme yok</h3><p>Tamamlanan randevuları değerlendirin</p></div>
+            ) : myReviews.slice().reverse().map(r => (
+              <div key={r.id} className="review-card">
+                <div className="review-meta">
+                  <div style={{ fontWeight: 600 }}>{r.masterName}</div>
+                  <div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{new Date(r.createdAt).toLocaleDateString("tr-TR")}</div>
+                </div>
+                <div className="stars" style={{ marginBottom: ".375rem" }}>{[1,2,3,4,5].map(i => <Star key={i} size={14} fill={i<=r.rating?"#f59e0b":"none"} stroke={i<=r.rating?"#f59e0b":"rgba(255,255,255,.2)"}/>)}</div>
+                {r.comment && <div style={{ fontSize: ".875rem", color: "var(--t2)" }}>{r.comment}</div>}
+              </div>
+            ))}
+          </>)}
+
           {/* PROFİLİM */}
           {tab === "profile" && (<>
             <div className="page-header"><div className="page-title">Profilim</div></div>
@@ -1307,12 +1472,13 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
 // ══════════════════════════════════════════════════════════════════
 // USTA SAYFASI
 // ══════════════════════════════════════════════════════════════════
-function MasterPage({ user, masters, setMasters, appointments, setAppointments, toast }: {
+function MasterPage({ user, masters, setMasters, appointments, setAppointments, reviews, setReviews: _setReviews, toast }: {
   user: AppUser; masters: Master[]; setMasters: React.Dispatch<React.SetStateAction<Master[]>>;
   appointments: Appointment[]; setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
+  reviews: Review[]; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void;
 }) {
-  type T = "profile" | "services" | "appointments";
+  type T = "profile" | "services" | "appointments" | "reviews";
   const [tab, setTab] = useState<T>("profile");
   const myMaster = masters.find(m => m.id === user.masterId || m.userId === user.id);
   const [name, setName] = useState(myMaster?.name ?? ""); const [specialty, setSpecialty] = useState(myMaster?.specialty ?? ""); const [district, setDistrict] = useState(myMaster?.district ?? "Çankaya"); const [bio, setBio] = useState(myMaster?.bio ?? ""); const [phone, setPhone] = useState(myMaster?.phone ?? "");
@@ -1383,10 +1549,14 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
     toast(status === "approved" ? "Randevu onaylandı" : status === "rejected" ? "Reddedildi" : "İş tamamlandı!", "ok");
   };
 
+  const myReviewsForMaster = reviews.filter(r => r.masterId === myMaster.id);
+  const avgRating = myReviewsForMaster.length ? (myReviewsForMaster.reduce((s, r) => s + r.rating, 0) / myReviewsForMaster.length).toFixed(1) : "—";
+
   const navItems = [
     { id: "profile" as T, icon: <User size={20}/>, label: "Profil" },
     { id: "services" as T, icon: <Package size={20}/>, label: "Hizmetler" },
     { id: "appointments" as T, icon: <Bell size={20}/>, label: "Randevular", badge: pendingCount },
+    { id: "reviews" as T, icon: <Star size={20}/>, label: "Görüşlerim", badge: myReviewsForMaster.length || undefined },
   ];
 
   return (
@@ -1545,6 +1715,38 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
                 </table>
               </div>
             </>)}
+          </>)}
+
+          {/* GÖRÜŞLERİM */}
+          {tab === "reviews" && (<>
+            <div className="page-header">
+              <div className="page-title">Görüşlerim</div>
+              <div className="page-sub">Müşterilerinizin değerlendirmeleri</div>
+            </div>
+            <div style={{ display: "flex", gap: "1rem", marginBottom: "1.25rem", flexWrap: "wrap" }}>
+              <div className="stat-card" style={{ flex: 1, minWidth: 120 }}>
+                <div className="stat-val" style={{ color: "#f59e0b" }}>{avgRating}</div>
+                <div className="stat-label">Ort. Puan</div>
+              </div>
+              <div className="stat-card" style={{ flex: 1, minWidth: 120 }}>
+                <div className="stat-val" style={{ color: "#60a5fa" }}>{myReviewsForMaster.length}</div>
+                <div className="stat-label">Toplam Yorum</div>
+              </div>
+            </div>
+            {myReviewsForMaster.length === 0 ? (
+              <div className="empty-state"><Star size={32}/><h3>Henüz yorum yok</h3><p>Müşterileriniz tamamlanan randevuları değerlendirince burada görünür</p></div>
+            ) : myReviewsForMaster.slice().reverse().map(r => (
+              <div key={r.id} className="review-card">
+                <div className="review-meta">
+                  <div style={{ fontWeight: 600, fontSize: ".875rem" }}>{r.customerName}</div>
+                  <div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{new Date(r.createdAt).toLocaleDateString("tr-TR")}</div>
+                </div>
+                <div className="stars" style={{ marginBottom: r.comment ? ".375rem" : 0 }}>
+                  {[1,2,3,4,5].map(i => <Star key={i} size={14} fill={i<=r.rating?"#f59e0b":"none"} stroke={i<=r.rating?"#f59e0b":"rgba(255,255,255,.2)"}/>)}
+                </div>
+                {r.comment && <div style={{ fontSize: ".875rem", color: "var(--t2)", lineHeight: 1.6 }}>{r.comment}</div>}
+              </div>
+            ))}
           </>)}
         </div>
       </div>
@@ -2002,6 +2204,17 @@ export default function App() {
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [previewMode, setPreviewMode] = useState<"customer" | "master" | null>(null);
   const [isOnline, setIsOnline] = useState(HAS_SUPABASE);
+  const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("oto_theme") as "dark"|"light") || "dark");
+  const [showAbout, setShowAbout] = useState(false);
+  const [reviews, setReviews] = useState<Review[]>(() => loadLS<Review[]>(LS.reviews, []));
+
+  // Tema class'ını body'e uygula
+  useEffect(() => {
+    document.body.classList.toggle("light-mode", theme === "light");
+    localStorage.setItem("oto_theme", theme);
+  }, [theme]);
+
+  const toggleTheme = () => setTheme(t => t === "dark" ? "light" : "dark");
 
   // Supabase'den başlangıç verilerini yükle
   useEffect(() => {
@@ -2070,14 +2283,58 @@ export default function App() {
     <div className="app">
       <style>{CSS}</style>
 
+      {/* HAKKIMIZDA MODAL */}
+      {showAbout && (
+        <div className="overlay" onClick={() => setShowAbout(false)}>
+          <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+            <div className="modal-head">
+              <h3>Hakkımızda</h3>
+              <button className="close-btn" onClick={() => setShowAbout(false)}><X size={16}/></button>
+            </div>
+            <div className="modal-body">
+              <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                <CarHero/>
+                <div style={{ fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-.02em", marginTop: ".5rem" }}><span className="g-text">OtoTamirci</span>Online</div>
+                <div style={{ fontSize: ".8125rem", color: "var(--t3)", marginTop: ".25rem" }}>ototamircimonline.com</div>
+              </div>
+              <p style={{ color: "var(--t2)", lineHeight: 1.8, fontSize: ".9rem", marginBottom: "1rem" }}>
+                OtoTamirciOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ve referanslı ustalarla buluşturan bir dijital platformdur.
+                Amacımız; şeffaf fiyatlandırma, güvenli ödeme ve kolay randevu sistemiyle hem müşterilere hem de ustalara en iyi deneyimi sunmaktır.
+              </p>
+              <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
+                {[
+                  ["Misyon", "Araç sahiplerinin yakın çevresindeki güvenilir ustayı kolayca bulmasını sağlamak."],
+                  ["Vizyon", "Türkiye genelinde en güvenilir araç bakım ve onarım platformu olmak."],
+                  ["Güvenlik", "Tüm ustalar kimlik ve referans doğrulamasından geçer. Ödemeler iş tamamlanana kadar güvende tutulur."],
+                ].map(([title, desc]) => (
+                  <div key={title} style={{ background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".875rem 1rem" }}>
+                    <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".25rem" }}>{title}</div>
+                    <div style={{ fontSize: ".8125rem", color: "var(--t2)", lineHeight: 1.65 }}>{desc}</div>
+                  </div>
+                ))}
+              </div>
+              <div style={{ marginTop: "1.25rem", padding: "1rem", background: "var(--bl-d)", border: "1px solid rgba(37,99,235,.25)", borderRadius: "var(--r12)", fontSize: ".8125rem", color: "#93c5fd" }}>
+                <div style={{ fontWeight: 700, marginBottom: ".375rem" }}>İletişim</div>
+                <div>{CONTACT_PHONE} · {CONTACT_EMAIL}</div>
+                <div>{CONTACT_ADDRESS}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* NAV */}
       <nav className="topnav">
         <div className="nav-logo">
           <div className="nav-logo-dot"/>
           <span>OtoTamirci<span className="nav-logo-text">Online</span></span>
         </div>
+        <button className="about-btn" onClick={() => setShowAbout(true)}>Hakkımızda</button>
         <div className="nav-spacer"/>
         <div className="nav-user">
+          <button className="theme-btn" onClick={toggleTheme} title="Tema değiştir">
+            {theme === "dark" ? "☀️ Açık" : "🌙 Koyu"}
+          </button>
           <div className={`db-indicator ${isOnline ? "db-online" : "db-offline"}`}>
             {isOnline ? <Wifi size={10}/> : <WifiOff size={10}/>}
             {isOnline ? "Supabase" : "LocalDB"}
@@ -2101,12 +2358,12 @@ export default function App() {
       {/* SAYFALAR */}
       {(activeUser.role === "customer" || previewMode === "customer") && (
         <>
-          <CustomerPage masters={masters} user={activeUser} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} toast={addToast}/>
+          <CustomerPage masters={masters} user={activeUser} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} reviews={reviews} setReviews={setReviews} toast={addToast}/>
           <Footer/>
         </>
       )}
       {(activeUser.role === "master" || previewMode === "master") && (
-        <MasterPage user={activeUser} masters={masters} setMasters={setMasters} appointments={appointments} setAppointments={setAppointments} toast={addToast}/>
+        <MasterPage user={activeUser} masters={masters} setMasters={setMasters} appointments={appointments} setAppointments={setAppointments} reviews={reviews} setReviews={setReviews} toast={addToast}/>
       )}
       {currentUser.role === "admin" && !previewMode && (
         <AdminPage masters={masters} setMasters={setMasters} users={users} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} toast={addToast} onPreview={setPreviewMode}/>
