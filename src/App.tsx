@@ -1384,22 +1384,40 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
             <div className="page-header"><div className="page-title">Randevularım</div></div>
             {myAppts.length === 0 ? (
               <div className="empty-state"><Clock size={36}/><h3>Henüz randevunuz yok</h3><p>Usta seçerek ilk randevunuzu oluşturun</p></div>
-            ) : myAppts.map(a => (
-              <div key={a.id} className="card" style={{ marginBottom: ".75rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ fontWeight: 700, marginBottom: ".25rem" }}>{a.masterName}</div>
-                    <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem" }} className="ellipsis">{a.services.map(s => s.name).join(", ")}</div>
-                    <div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.date} · {a.timeSlot}</div>
-                    {a.payment && <div style={{ fontSize: ".75rem", color: "var(--ok)", marginTop: ".375rem", display: "flex", alignItems: "center", gap: ".25rem", flexWrap: "wrap" }}><Receipt size={11}/>#{a.payment.transactionId} · *{a.payment.cardLast4} · {fmtTL(a.payment.amount)}</div>}
+            ) : myAppts.map(a => {
+              const stepInfo: Record<AppointmentStatus, { label: string; color: string; hint: string }> = {
+                pending:   { label: "Onay Bekleniyor", color: "var(--warn)", hint: "Usta talebinizi inceliyor." },
+                approved:  { label: "Ödeme Yapılabilir", color: "var(--ok)", hint: "Usta onayladı. Ödeme yaparak randevuyu tamamlayın." },
+                rejected:  { label: "Reddedildi", color: "var(--err)", hint: "Usta bu talebi kabul etmedi." },
+                paid:      { label: "Ödeme Yapıldı ✓", color: "#60a5fa", hint: "Ödemeniz alındı. Ustanız işi tamamlayınca durum güncellenecek." },
+                completed: { label: "İş Tamamlandı ✓", color: "var(--ok)", hint: "Usta işi tamamladı. Değerlendirme yapabilirsiniz." },
+              };
+              const si = stepInfo[a.status];
+              return (
+                <div key={a.id} className="card" style={{ marginBottom: ".75rem", borderLeft: `3px solid ${si.color}` }}>
+                  <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: "1rem", flexWrap: "wrap" }}>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontWeight: 700, marginBottom: ".25rem" }}>{a.masterName}</div>
+                      <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem" }}>{a.services.map(s => s.name).join(", ")}</div>
+                      <div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.date} · {a.timeSlot}</div>
+                      {a.payment && <div style={{ fontSize: ".75rem", color: "var(--ok)", marginTop: ".375rem", display: "flex", alignItems: "center", gap: ".25rem", flexWrap: "wrap" }}><Receipt size={11}/>#{a.payment.transactionId} · *{a.payment.cardLast4} · {fmtTL(a.payment.amount)}</div>}
+                    </div>
+                    <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".5rem", flexShrink: 0 }}>
+                      <span style={{ fontWeight: 800, color: "#60a5fa" }}>{fmtTL(a.total)}</span>
+                      <span style={{ fontSize: ".75rem", fontWeight: 700, color: si.color }}>{si.label}</span>
+                    </div>
                   </div>
-                  <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".5rem", flexShrink: 0 }}>
-                    <span style={{ fontWeight: 800, color: "#60a5fa" }}>{fmtTL(a.total)}</span>
-                    <span className={`status s-${a.status}`}>{statusLabel[a.status]}</span>
+                  <div style={{ marginTop: ".625rem", padding: ".5rem .75rem", background: "var(--g)", borderRadius: "var(--r8)", fontSize: ".8125rem", color: "var(--t2)", display: "flex", alignItems: "center", gap: ".5rem" }}>
+                    {a.status === "pending" && <Clock size={13} style={{ color: "var(--warn)", flexShrink: 0 }}/>}
+                    {a.status === "approved" && <CreditCard size={13} style={{ color: "var(--ok)", flexShrink: 0 }}/>}
+                    {a.status === "paid" && <Wrench size={13} style={{ color: "#60a5fa", flexShrink: 0 }}/>}
+                    {a.status === "completed" && <CheckCircle size={13} style={{ color: "var(--ok)", flexShrink: 0 }}/>}
+                    {a.status === "rejected" && <XCircle size={13} style={{ color: "var(--err)", flexShrink: 0 }}/>}
+                    {si.hint}
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>)}
 
           {/* GÖRÜŞLER */}
@@ -1691,23 +1709,44 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
             {myAppts.length === 0 ? (
               <div className="empty-state"><Bell size={36}/><h3>Randevu yok</h3><p>Müşteri randevu talebinde bulununca burada görünür</p></div>
             ) : (<>
+              {/* Ödeme alındı — işi tamamla bildirimi */}
+              {myAppts.filter(a => a.status === "paid").map(a => (
+                <div key={a.id} style={{ background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.3)", borderRadius: "var(--r16)", padding: "1.25rem", marginBottom: "1rem" }}>
+                  <div style={{ display: "flex", alignItems: "center", gap: ".625rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
+                    <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(16,185,129,.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                      <CreditCard size={18} style={{ color: "var(--ok)" }}/>
+                    </div>
+                    <div>
+                      <div style={{ fontWeight: 700, color: "var(--ok)" }}>Ödeme Alındı — İş Tamamlanmayı Bekliyor</div>
+                      <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{a.customerName} · {a.date} · {a.timeSlot}</div>
+                    </div>
+                    <div style={{ marginLeft: "auto", fontWeight: 800, color: "var(--ok)", fontSize: "1.125rem" }}>{fmtTL(a.total)}</div>
+                  </div>
+                  <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: "1rem" }}>
+                    Hizmetler: {a.services.map(s => s.name).join(", ")}
+                  </div>
+                  <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem", fontSize: ".9375rem" }} onClick={() => updateAppt(a.id, "completed")}>
+                    <CheckCircle size={16}/> İşi Tamamladım — Müşteriyi Bilgilendir
+                  </button>
+                </div>
+              ))}
+
               {myAppts.filter(a => a.status === "pending").length > 0 && (
-                <div className="alert a-warn" style={{ marginBottom: "1rem" }}><AlertCircle size={14}/>{myAppts.filter(a => a.status === "pending").length} bekleyen randevu talebi var!</div>
+                <div className="alert a-warn" style={{ marginBottom: "1rem" }}><AlertCircle size={14}/>{myAppts.filter(a => a.status === "pending").length} yeni randevu talebi bekliyor</div>
               )}
               <div className="tbl-wrap">
                 <table className="tbl">
                   <thead><tr><th>Müşteri</th><th>Hizmetler</th><th>Tarih/Saat</th><th>Tutar</th><th>Durum</th><th>İşlem</th></tr></thead>
                   <tbody>
-                    {myAppts.map(a => (
+                    {myAppts.filter(a => a.status !== "paid").map(a => (
                       <tr key={a.id}>
                         <td><div style={{ fontWeight: 600 }}>{a.customerName}</div><div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.customerPhone}</div></td>
                         <td style={{ color: "var(--t2)", fontSize: ".8125rem", maxWidth: 180 }} className="ellipsis">{a.services.map(s => s.name).join(", ")}</td>
                         <td style={{ fontSize: ".8125rem", color: "var(--t2)", whiteSpace: "nowrap" }}>{a.date}<br/>{a.timeSlot}</td>
                         <td><strong style={{ color: "#60a5fa" }}>{fmtTL(a.total)}</strong></td>
-                        <td><span className={`status s-${a.status}`}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : a.status === "paid" ? "Ödendi" : "Tamamlandı"}</span></td>
+                        <td><span className={`status s-${a.status}`}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : "Tamamlandı"}</span></td>
                         <td><div style={{ display: "flex", gap: ".375rem" }}>
                           {a.status === "pending" && <><button className="btn btn-success btn-xs" onClick={() => updateAppt(a.id, "approved")}><Check size={11}/>Onayla</button><button className="btn btn-danger btn-xs" onClick={() => updateAppt(a.id, "rejected")}><X size={11}/></button></>}
-                          {a.status === "paid" && <button className="btn btn-primary btn-xs" onClick={() => updateAppt(a.id, "completed")}><CheckCircle size={11}/>Tamamla</button>}
                         </div></td>
                       </tr>
                     ))}
