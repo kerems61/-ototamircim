@@ -1549,6 +1549,21 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
   const [fN, setFN] = useState(""); const [fE, setFE] = useState(""); const [fPh, setFPh] = useState(""); const [fPw, setFPw] = useState(""); const [fSp, setFSp] = useState(""); const [fDist, setFDist] = useState("Çankaya"); const [fBio, setFBio] = useState(""); const [fTel, setFTel] = useState("");
   const [editMaster, setEditMaster] = useState<string | null>(null);
   const [eName, setEName] = useState(""); const [eSpec, setESpec] = useState(""); const [eDist, setEDist] = useState(""); const [eBio, setEBio] = useState(""); const [ePhone, setEPhone] = useState("");
+  const [svcMaster, setSvcMaster] = useState<string | null>(null);
+  const [aSvcN, setASvcN] = useState(""); const [aSvcP, setASvcP] = useState(""); const [aSvcD, setASvcD] = useState(""); const [aSvcDsc, setASvcDsc] = useState("");
+
+  const adminAddSvc = (masterId: string) => {
+    if (!aSvcN || !aSvcP) { toast("İsim ve fiyat zorunlu", "err"); return; }
+    const newSvc: Service = { id: "s_" + uid(), name: aSvcN, price: Number(aSvcP), duration: aSvcD || "Belirtilmedi", description: aSvcDsc };
+    supabase?.insert("services", { id: newSvc.id, master_id: masterId, name: newSvc.name, price: newSvc.price, duration: newSvc.duration, description: newSvc.description }).catch(console.error);
+    setMasters(prev => { const n = prev.map(m => m.id === masterId ? { ...m, services: [...m.services, newSvc] } : m); saveLS(LS.masters, n); return n; });
+    setASvcN(""); setASvcP(""); setASvcD(""); setASvcDsc(""); toast("Hizmet eklendi", "ok");
+  };
+  const adminDelSvc = (masterId: string, svcId: string) => {
+    supabase?.delete("services", svcId).catch(console.error);
+    setMasters(prev => { const n = prev.map(m => m.id === masterId ? { ...m, services: m.services.filter(s => s.id !== svcId) } : m); saveLS(LS.masters, n); return n; });
+    toast("Hizmet silindi", "ok");
+  };
 
   const pending = masters.filter(m => m.isPending && !m.isApproved);
   const approved = masters.filter(m => m.isApproved);
@@ -1669,7 +1684,8 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                         <td><span className="tag">{m.services.length} hizmet</span></td>
                         <td>{m.isApproved ? <span className="status s-approved"><CheckCircle size={10}/>Onaylı</span> : <span className="status s-pending"><Clock size={10}/>Bekliyor</span>}</td>
                         <td><div style={{ display: "flex", gap: ".375rem" }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => editMaster === m.id ? setEditMaster(null) : startEdit(m)}><Edit3 size={11}/></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => { setSvcMaster(svcMaster === m.id ? null : m.id); setEditMaster(null); }}><Package size={11}/></button>
+                          <button className="btn btn-ghost btn-xs" onClick={() => { setEditMaster(editMaster === m.id ? null : m.id); setSvcMaster(null); startEdit(m); }}><Edit3 size={11}/></button>
                           <button className="btn btn-danger btn-xs" onClick={() => deleteMaster(m.id)}><Trash2 size={11}/></button>
                         </div></td>
                       </tr>
@@ -1688,6 +1704,32 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                             <div style={{ display: "flex", gap: ".5rem", justifyContent: "flex-end" }}>
                               <button className="btn btn-ghost btn-sm" onClick={() => setEditMaster(null)}>İptal</button>
                               <button className="btn btn-primary btn-sm" onClick={() => saveEdit(m.id)}><Save size={12}/>Kaydet</button>
+                            </div>
+                          </div>
+                        </td></tr>
+                      )}
+                      {svcMaster === m.id && (
+                        <tr><td colSpan={7} style={{ padding: 0 }}>
+                          <div style={{ background: "var(--bg3)", padding: "1rem", borderBottom: "1px solid var(--gb)" }}>
+                            <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem", display: "flex", alignItems: "center", gap: ".5rem" }}><Package size={13}/>{m.name} — Hizmetler</div>
+                            {m.services.length === 0 ? <div style={{ color: "var(--t3)", fontSize: ".8125rem", marginBottom: ".75rem" }}>Henüz hizmet yok.</div> : m.services.map(s => (
+                              <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: ".375rem 0", borderBottom: "1px solid var(--gb)", fontSize: ".8125rem" }}>
+                                <span>{s.name} <span style={{ color: "var(--t3)" }}>· {s.duration}</span></span>
+                                <div style={{ display: "flex", alignItems: "center", gap: ".75rem" }}>
+                                  <span style={{ fontWeight: 700 }}>{fmtTL(s.price)}</span>
+                                  <button className="btn btn-danger btn-xs" onClick={() => adminDelSvc(m.id, s.id)}><Trash2 size={10}/></button>
+                                </div>
+                              </div>
+                            ))}
+                            <div style={{ marginTop: ".875rem", display: "grid", gridTemplateColumns: "2fr 1fr 1fr", gap: ".5rem", alignItems: "end" }}>
+                              <div className="fg" style={{ marginBottom: 0 }}><label className="fl">Hizmet Adı</label><input className="fi" placeholder="örn: Lastik Değişimi" value={aSvcN} onChange={e => setASvcN(e.target.value)}/></div>
+                              <div className="fg" style={{ marginBottom: 0 }}><label className="fl">Fiyat (₺)</label><input className="fi" type="number" placeholder="500" value={aSvcP} onChange={e => setASvcP(e.target.value)}/></div>
+                              <div className="fg" style={{ marginBottom: 0 }}><label className="fl">Süre</label><input className="fi" placeholder="1 saat" value={aSvcD} onChange={e => setASvcD(e.target.value)}/></div>
+                            </div>
+                            <input className="fi" placeholder="Açıklama (opsiyonel)" value={aSvcDsc} onChange={e => setASvcDsc(e.target.value)} style={{ marginTop: ".5rem" }}/>
+                            <div style={{ display: "flex", gap: ".5rem", justifyContent: "flex-end", marginTop: ".75rem" }}>
+                              <button className="btn btn-ghost btn-sm" onClick={() => setSvcMaster(null)}>Kapat</button>
+                              <button className="btn btn-primary btn-sm" onClick={() => adminAddSvc(m.id)}><Plus size={12}/>Hizmet Ekle</button>
                             </div>
                           </div>
                         </td></tr>
