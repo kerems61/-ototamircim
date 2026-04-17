@@ -143,6 +143,7 @@ interface Master {
   email: string;
   lat: number;
   lng: number;
+  availability: { days: string[]; slots: string[] };
 }
 
 interface AppUser {
@@ -184,6 +185,7 @@ interface ToastItem { id: number; msg: string; type: "ok" | "err" | "info" | "wa
 const ANKARA_CENTER = { lat: 39.9334, lng: 32.8597 };
 const DISTRICTS = ["Tümü","Çankaya","Keçiören","Mamak","Sincan","Etimesgut","Yenimahalle","Altındağ","Pursaklar"];
 const TIME_SLOTS = ["08:00-10:00","10:00-12:00","12:00-14:00","14:00-16:00","16:00-18:00","18:00-20:00"];
+const DAYS = ["Pazartesi","Salı","Çarşamba","Perşembe","Cuma","Cumartesi","Pazar"];
 const SECURITY_Q = "İlk arabanızın markası nedir?";
 const LS = {
   users: "oto_users", masters: "oto_masters", appointments: "oto_appointments"
@@ -218,6 +220,7 @@ const masterFromDB = (row: DBRow, svcs: DBRow[]): Master => ({
   bio: (row.bio as string) || "", phone: (row.phone as string) || "",
   email: (row.email as string) || "",
   lat: Number(row.lat || 39.9334), lng: Number(row.lng || 32.8597),
+  availability: (row.availability as { days: string[]; slots: string[] }) || { days: [], slots: [] },
   services: svcs.filter(s => s.master_id === row.id).map(s => ({
     id: s.id as string, name: (s.name as string) || "",
     price: Number(s.price || 0), duration: (s.duration as string) || "Belirtilmedi",
@@ -229,7 +232,7 @@ const masterToDB = (m: Master): DBRow => ({
   specialty: m.specialty, district: m.district, rating: m.rating,
   completed_jobs: m.completedJobs, is_approved: m.isApproved,
   is_pending: m.isPending, bio: m.bio, phone: m.phone, email: m.email,
-  lat: m.lat, lng: m.lng,
+  lat: m.lat, lng: m.lng, availability: m.availability || { days: [], slots: [] },
 });
 const userFromDB = (row: DBRow): AppUser => ({
   id: row.id as string, name: (row.name as string) || "",
@@ -574,10 +577,26 @@ const CSS = `
 
   @media(max-width:639px){
     .auth-card{padding:1.5rem;}
-    .content{padding:1rem;}
-    .modal-body{padding:1rem;}
-    .modal-head{padding:.875rem 1rem;}
-    .modal-foot{padding:.75rem 1rem;}
+    .content{padding:.75rem;}
+    .modal-body{padding:.875rem;}
+    .modal-head{padding:.75rem .875rem;}
+    .modal-foot{padding:.625rem .875rem;}
+    .page-title{font-size:1.25rem;}
+    .card{padding:1rem;}
+    .stat-grid{grid-template-columns:1fr 1fr;}
+    table{font-size:.75rem;}
+    table th,table td{padding:.375rem .5rem;}
+    .masters-grid{grid-template-columns:1fr;}
+    .btn{font-size:.8125rem;}
+    .nav-name{max-width:80px;}
+    .modal{margin:.5rem;border-radius:12px;}
+    .auth-outer{flex-direction:column;}
+    .auth-deco{display:none;}
+    .auth-right{padding:1rem;}
+  }
+  @media(max-width:400px){
+    .mob-nav-item{min-width:44px;padding:.5rem .4rem;font-size:.5625rem;}
+    .fr2{grid-template-columns:1fr;}
   }
 `;
 
@@ -629,7 +648,7 @@ function MasterMap({ markers, userLoc, onSelect }: {
     const L = (window as unknown as Record<string, unknown>).L as Record<string, unknown>;
     if (!L || !ref.current || inst.current) return;
     const map = (L.map as (el: HTMLElement, opts: unknown) => unknown)(ref.current, { center: [ANKARA_CENTER.lat, ANKARA_CENTER.lng], zoom: 12 });
-    (L.tileLayer as (url: string, opts: unknown) => { addTo: (m: unknown) => void })("https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png", { attribution: "© OSM © CARTO", maxZoom: 19 }).addTo(map);
+    (L.tileLayer as (url: string, opts: unknown) => { addTo: (m: unknown) => void })("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { attribution: "© OSM © CARTO", maxZoom: 19 }).addTo(map);
     inst.current = map;
     return () => { (map as { remove: () => void }).remove(); inst.current = null; };
   }, []);
@@ -965,12 +984,15 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
   const submit = () => {
     if (!selected.length) { toast("En az bir hizmet seçin", "err"); return; }
     if (!slot) { toast("Saat aralığı seçin", "err"); return; }
-    const appt: Appointment = { id: "appt_" + uid(), customerId: user.id, customerName: user.name, customerPhone: user.phone, masterId: master.id, masterName: master.name, services: selected, total, timeSlot: slot, date: date || new Date().toLocaleDateString("tr-TR"), status: "pending", createdAt: new Date(), notes };
+    const av = master.availability;
+    const dayName = new Date(date || Date.now()).toLocaleDateString("tr-TR", { weekday: "long" });
+    const autoApprove = av?.slots?.includes(slot) && (av?.days?.length === 0 || av?.days?.some(d => dayName.toLowerCase().startsWith(d.toLowerCase().slice(0, 3))));
+    const appt: Appointment = { id: "appt_" + uid(), customerId: user.id, customerName: user.name, customerPhone: user.phone, masterId: master.id, masterName: master.name, services: selected, total, timeSlot: slot, date: date || new Date().toLocaleDateString("tr-TR"), status: autoApprove ? "approved" : "pending", createdAt: new Date(), notes };
     supabase?.insert("appointments", apptToDB(appt)).catch(console.error);
     supabase?.update("app_users", user.id, { appointment_count: user.appointmentCount + 1 }).catch(console.error);
     setAppointments(prev => { const n = [...prev, appt]; saveLS(LS.appointments, n); return n; });
     setUsers(prev => { const n = prev.map(u => u.id === user.id ? { ...u, appointmentCount: u.appointmentCount + 1 } : u); saveLS(LS.users, n); return n; });
-    toast("Randevu talebi usta onayına gönderildi!", "ok"); onClose();
+    toast(autoApprove ? "Randevu otomatik onaylandı!" : "Randevu talebi usta onayına gönderildi!", "ok"); onClose();
   };
 
   const handlePaySuccess = (info: NonNullable<Appointment["payment"]>) => {
@@ -1256,6 +1278,10 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
   const [tab, setTab] = useState<T>("profile");
   const myMaster = masters.find(m => m.id === user.masterId || m.userId === user.id);
   const [name, setName] = useState(myMaster?.name ?? ""); const [specialty, setSpecialty] = useState(myMaster?.specialty ?? ""); const [district, setDistrict] = useState(myMaster?.district ?? "Çankaya"); const [bio, setBio] = useState(myMaster?.bio ?? ""); const [phone, setPhone] = useState(myMaster?.phone ?? "");
+  const [avDays, setAvDays] = useState<string[]>(myMaster?.availability?.days ?? []);
+  const [avSlots, setAvSlots] = useState<string[]>(myMaster?.availability?.slots ?? []);
+  const [masterLat, setMasterLat] = useState(myMaster?.lat ?? ANKARA_CENTER.lat);
+  const [masterLng, setMasterLng] = useState(myMaster?.lng ?? ANKARA_CENTER.lng);
   const [showSvcForm, setShowSvcForm] = useState(false);
   const [sN, setSN] = useState(""); const [sP, setSP] = useState(""); const [sD, setSD] = useState(""); const [sDsc, setSDsc] = useState("");
   const [editPrices, setEditPrices] = useState<Record<string, string>>({});
@@ -1271,10 +1297,21 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
   const pendingCount = myAppts.filter(a => a.status === "pending").length;
 
   const saveProfile = () => {
-    supabase?.update("masters", myMaster.id, { name, specialty, district, bio, phone }).catch(console.error);
-    setMasters(prev => { const n = prev.map(m => m.id === myMaster.id ? { ...m, name, specialty, district, bio, phone } : m); saveLS(LS.masters, n); return n; });
+    const availability = { days: avDays, slots: avSlots };
+    supabase?.update("masters", myMaster.id, { name, specialty, district, bio, phone, lat: masterLat, lng: masterLng, availability }).catch(console.error);
+    setMasters(prev => { const n = prev.map(m => m.id === myMaster.id ? { ...m, name, specialty, district, bio, phone, lat: masterLat, lng: masterLng, availability } : m); saveLS(LS.masters, n); return n; });
     toast("Profil güncellendi", "ok");
   };
+
+  const getMyLocation = () => {
+    if (!navigator.geolocation) { toast("Tarayıcı konum desteklemiyor", "err"); return; }
+    navigator.geolocation.getCurrentPosition(
+      pos => { setMasterLat(pos.coords.latitude); setMasterLng(pos.coords.longitude); toast("Konum alındı!", "ok"); },
+      () => toast("Konum izni verilmedi", "err")
+    );
+  };
+  const toggleDay = (d: string) => setAvDays(prev => prev.includes(d) ? prev.filter(x => x !== d) : [...prev, d]);
+  const toggleSlot = (s: string) => setAvSlots(prev => prev.includes(s) ? prev.filter(x => x !== s) : [...prev, s]);
 
   const addSvc = () => {
     if (!sN || !sP) { toast("İsim ve fiyat zorunlu", "err"); return; }
@@ -1343,6 +1380,34 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
                 <div className="fg"><label className="fl">Telefon</label><input className="fi" value={phone} onChange={e => setPhone(e.target.value)}/></div>
               </div>
               <div className="fg"><label className="fl">Hakkımda</label><textarea className="fi" rows={3} style={{ resize: "none" }} value={bio} onChange={e => setBio(e.target.value)} placeholder="Kendinizi kısaca tanıtın..."/></div>
+              <div className="fg">
+                <label className="fl">Konum</label>
+                <div style={{ display: "flex", gap: ".5rem", alignItems: "center", flexWrap: "wrap" }}>
+                  <input className="fi" type="number" step="0.0001" placeholder="Enlem" value={masterLat} onChange={e => setMasterLat(Number(e.target.value))} style={{ flex: 1, minWidth: 120 }}/>
+                  <input className="fi" type="number" step="0.0001" placeholder="Boylam" value={masterLng} onChange={e => setMasterLng(Number(e.target.value))} style={{ flex: 1, minWidth: 120 }}/>
+                  <button className="btn btn-ghost btn-sm" onClick={getMyLocation}><Navigation size={13}/>Konumumu Al</button>
+                </div>
+              </div>
+              <div style={{ display: "flex", justifyContent: "flex-end" }}><button className="btn btn-primary" onClick={saveProfile}><Save size={13}/>Kaydet</button></div>
+            </div>
+
+            <div className="card" style={{ marginTop: "1rem" }}>
+              <div className="card-title"><Clock size={14}/>Çalışma Günleri & Saatleri</div>
+              <label className="fl">Müsait Günler</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: ".375rem", marginBottom: "1rem" }}>
+                {DAYS.map(d => (
+                  <button key={d} onClick={() => toggleDay(d)} className={`btn btn-sm ${avDays.includes(d) ? "btn-primary" : "btn-ghost"}`}>{d}</button>
+                ))}
+              </div>
+              <label className="fl">Müsait Saatler</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: ".375rem", marginBottom: "1rem" }}>
+                {TIME_SLOTS.map(s => (
+                  <button key={s} onClick={() => toggleSlot(s)} className={`btn btn-sm ${avSlots.includes(s) ? "btn-primary" : "btn-ghost"}`}>{s}</button>
+                ))}
+              </div>
+              <div style={{ background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.2)", borderRadius: 8, padding: ".625rem .875rem", fontSize: ".8125rem", color: "#34d399", marginBottom: ".875rem" }}>
+                Seçili gün ve saatlerdeki randevular otomatik onaylanır.
+              </div>
               <div style={{ display: "flex", justifyContent: "flex-end" }}><button className="btn btn-primary" onClick={saveProfile}><Save size={13}/>Kaydet</button></div>
             </div>
           </>)}
@@ -1482,7 +1547,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
     if (users.find(u => u.email === fE)) { toast("Bu e-posta zaten kayıtlı", "err"); return; }
     const mid = "m_" + uid(); const uid2 = "u_" + uid();
     const nu: AppUser = { id: uid2, name: fN, email: fE, phone: fPh, password: fPw, securityAnswer: "yok", role: "master", masterId: mid, createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
-    const nm: Master = { id: mid, userId: uid2, name: fN, avatar: fN.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2), specialty: fSp, district: fDist, rating: 0, completedJobs: 0, isApproved: true, isPending: false, services: [], bio: fBio, phone: fTel || fPh, email: fE, lat: ANKARA_CENTER.lat + (Math.random()-.5)*.1, lng: ANKARA_CENTER.lng + (Math.random()-.5)*.15 };
+    const nm: Master = { id: mid, userId: uid2, name: fN, avatar: fN.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2), specialty: fSp, district: fDist, rating: 0, completedJobs: 0, isApproved: true, isPending: false, services: [], bio: fBio, phone: fTel || fPh, email: fE, lat: ANKARA_CENTER.lat + (Math.random()-.5)*.1, lng: ANKARA_CENTER.lng + (Math.random()-.5)*.15, availability: { days: [], slots: [] } };
     supabase?.insert("app_users", userToDB(nu)).catch(console.error);
     supabase?.insert("masters", masterToDB(nm)).catch(console.error);
     setUsers(prev => { const n = [...prev, nu]; saveLS(LS.users, n); return n; });
