@@ -562,7 +562,8 @@ const CSS = `
   .cat-badge{display:inline-flex;align-items:center;gap:.25rem;font-size:.6875rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;letter-spacing:.02em;}
   .cat-tamir{background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.3);color:#60a5fa;}
   .cat-yikama{background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.3);color:#22d3ee;}
-  @media(max-width:480px){.cat-tab-label{display:none;}}
+  @media(max-width:560px){.cat-tab-label{font-size:.6875rem;}}
+  @media(max-width:360px){.cat-tab-label{display:none;}}
   /* Admin mobil önizleme butonları */
   .admin-mob-preview{display:none;gap:.5rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--gb);}
   @media(max-width:767px){.admin-mob-preview{display:flex;}}
@@ -1320,14 +1321,34 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   const getLoc = () => {
     if (!navigator.geolocation) {
       setUserLoc(ANKARA_CENTER);
-      toast("Tarayıcı konum desteklemiyor, Ankara merkezi baz alındı", "warn");
+      toast("Tarayıcı konum desteklemiyor", "warn");
       return;
     }
     setLocLoading(true);
+    const success = (p: GeolocationPosition) => {
+      setUserLoc({ lat: p.coords.latitude, lng: p.coords.longitude });
+      setLocLoading(false);
+      toast("Konumunuz alındı", "ok");
+    };
+    const fail = (err: GeolocationPositionError) => {
+      setUserLoc(ANKARA_CENTER);
+      setLocLoading(false);
+      if (err.code === 1) toast("Konum izni verilmedi. Safari Ayarlar'dan izin verin.", "warn");
+      else if (err.code === 2) toast("Konum alınamadı. Konum servislerini açın.", "warn");
+      else if (err.code === 3) toast("Zaman aşımı. Tekrar deneyin.", "warn");
+      else toast("Konum alınamadı, Ankara merkezi baz alındı", "warn");
+    };
+    // iOS Safari: önce düşük hassasiyet dene (hızlı), olmazsa yüksek hassasiyet
     navigator.geolocation.getCurrentPosition(
-      p => { setUserLoc({ lat: p.coords.latitude, lng: p.coords.longitude }); setLocLoading(false); toast("Konumunuz alındı", "ok"); },
-      () => { setUserLoc(ANKARA_CENTER); setLocLoading(false); toast("Konum alınamadı, Ankara merkezi baz alındı", "warn"); },
-      { enableHighAccuracy: true, timeout: 10000 }
+      success,
+      (err) => {
+        if (err.code === 3) {
+          navigator.geolocation.getCurrentPosition(success, fail, { enableHighAccuracy: false, timeout: 15000, maximumAge: 60000 });
+        } else {
+          fail(err);
+        }
+      },
+      { enableHighAccuracy: true, timeout: 8000, maximumAge: 0 }
     );
   };
 
@@ -1372,16 +1393,16 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
             </div>
 
             {/* Kategori sekmeleri */}
-            <div style={{ display: "flex", gap: ".5rem", marginBottom: "1rem", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".25rem" }}>
+            <div style={{ display: "flex", gap: ".375rem", marginBottom: "1rem", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".25rem" }}>
               {[
-                { id: "all" as const, label: "Tümü", icon: <List size={14}/> },
-                { id: "tamir" as const, label: "Oto Tamir & Bakım", icon: <Wrench size={14}/> },
-                { id: "yikama" as const, label: "Oto Yıkama", icon: <span>💧</span> },
+                { id: "all" as const, label: "Tümü", icon: <List size={13}/> },
+                { id: "tamir" as const, label: "Tamir", icon: <Wrench size={13}/> },
+                { id: "yikama" as const, label: "Yıkama", icon: <span>💧</span> },
               ].map(c => (
                 <button
                   key={c.id}
                   onClick={() => setCatFilter(c.id)}
-                  style={{ flex: 1, padding: ".5rem .625rem", background: catFilter === c.id ? "linear-gradient(135deg,var(--bl),var(--ind))" : "transparent", color: catFilter === c.id ? "#fff" : "var(--t2)", border: "none", borderRadius: "var(--r8)", cursor: "pointer", fontFamily: "'Outfit',sans-serif", fontSize: ".8125rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: ".375rem", transition: "all .18s" }}
+                  style={{ flex: 1, padding: ".5rem .5rem", background: catFilter === c.id ? "linear-gradient(135deg,var(--bl),var(--ind))" : "transparent", color: catFilter === c.id ? "#fff" : "var(--t2)", border: "none", borderRadius: "var(--r8)", cursor: "pointer", fontFamily: "'Outfit',sans-serif", fontSize: ".8125rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: ".375rem", transition: "all .18s", whiteSpace: "nowrap" }}
                 >
                   {c.icon}<span className="cat-tab-label">{c.label}</span>
                 </button>
