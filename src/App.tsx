@@ -126,6 +126,8 @@ interface Service {
   description: string;
 }
 
+type MasterCategory = "tamir" | "yikama";
+
 interface Master {
   id: string;
   userId: string;
@@ -144,6 +146,7 @@ interface Master {
   lat: number;
   lng: number;
   availability: { days: string[]; slots: string[] };
+  category: MasterCategory;
 }
 
 interface AppUser {
@@ -240,6 +243,7 @@ const masterFromDB = (row: DBRow, svcs: DBRow[]): Master => ({
   email: (row.email as string) || "",
   lat: Number(row.lat || 39.9334), lng: Number(row.lng || 32.8597),
   availability: (row.availability as { days: string[]; slots: string[] }) || { days: [], slots: [] },
+  category: ((row.category as MasterCategory) || "tamir"),
   services: svcs.filter(s => s.master_id === row.id).map(s => ({
     id: s.id as string, name: (s.name as string) || "",
     price: Number(s.price || 0), duration: (s.duration as string) || "Belirtilmedi",
@@ -252,6 +256,7 @@ const masterToDB = (m: Master): DBRow => ({
   completed_jobs: m.completedJobs, is_approved: m.isApproved,
   is_pending: m.isPending, bio: m.bio, phone: m.phone, email: m.email,
   lat: m.lat, lng: m.lng, availability: m.availability || { days: [], slots: [] },
+  category: m.category || "tamir",
 });
 const userFromDB = (row: DBRow): AppUser => ({
   id: row.id as string, name: (row.name as string) || "",
@@ -332,7 +337,7 @@ const CSS = `
   #root{min-height:100dvh;}
   /* mobile overflow fix */
   *{-webkit-overflow-scrolling:touch;}
-  p,div,span,a,h1,h2,h3,h4,h5,button,label{overflow-wrap:break-word;word-break:break-word;max-width:100%;}
+  p,a,h1,h2,h3,h4,h5,label{overflow-wrap:break-word;}
   h1,h2,h3,h4,h5{font-family:'Outfit',sans-serif;letter-spacing:-.02em;}
   code,pre{font-family:'JetBrains Mono',monospace;}
 
@@ -554,6 +559,13 @@ const CSS = `
   .av-sm{width:36px;height:36px;font-size:.75rem;border-radius:var(--r8);}
   .dist-badge{position:absolute;top:.875rem;right:.875rem;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.28);border-radius:var(--r8);padding:.2rem .55rem;font-size:.6875rem;color:var(--ok);display:flex;align-items:center;gap:.2rem;font-weight:600;}
   .tag{background:var(--bl-d);border:1px solid rgba(37,99,235,.22);border-radius:6px;padding:.2rem .5rem;font-size:.6875rem;color:#60a5fa;font-weight:600;}
+  .cat-badge{display:inline-flex;align-items:center;gap:.25rem;font-size:.6875rem;font-weight:700;padding:.2rem .5rem;border-radius:6px;letter-spacing:.02em;}
+  .cat-tamir{background:rgba(37,99,235,.12);border:1px solid rgba(37,99,235,.3);color:#60a5fa;}
+  .cat-yikama{background:rgba(6,182,212,.12);border:1px solid rgba(6,182,212,.3);color:#22d3ee;}
+  @media(max-width:480px){.cat-tab-label{display:none;}}
+  /* Admin mobil önizleme butonları */
+  .admin-mob-preview{display:none;gap:.5rem;margin-bottom:1rem;padding-bottom:1rem;border-bottom:1px solid var(--gb);}
+  @media(max-width:767px){.admin-mob-preview{display:flex;}}
 
   /* ── HARİTA ── */
   .map-wrap{border-radius:var(--r16);overflow:hidden;border:1px solid var(--gb);}
@@ -567,7 +579,8 @@ const CSS = `
   .tbl-wrap{overflow-x:auto;-webkit-overflow-scrolling:touch;border-radius:var(--r12);border:1px solid var(--gb);}
   .tbl{width:100%;border-collapse:collapse;min-width:600px;}
   .tbl th{font-size:.75rem;color:var(--t2);font-weight:700;padding:.625rem 1rem;text-align:left;border-bottom:1px solid var(--gb);white-space:nowrap;letter-spacing:.03em;text-transform:uppercase;background:rgba(255,255,255,.02);}
-  .tbl td{padding:.875rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.875rem;vertical-align:middle;}
+  .tbl td{padding:.875rem 1rem;border-bottom:1px solid rgba(255,255,255,.04);font-size:.875rem;vertical-align:middle;white-space:nowrap;}
+  .tbl td.wrap{white-space:normal;max-width:200px;}
   .tbl tr:last-child td{border-bottom:none;}
   .tbl tr:hover td{background:rgba(255,255,255,.025);}
 
@@ -996,24 +1009,17 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
       {/* Sol dekorasyon */}
       <div className="auth-deco">
         <div className="auth-deco-bg"/>
-        <div className="gear" style={{ width: 100, height: 100, top: "8%", left: "5%", animationDuration: "20s" }}/>
-        <div className="gear" style={{ width: 70, height: 70, top: "18%", right: "8%", animationDuration: "14s", animationDirection: "reverse" }}/>
-        <div className="gear" style={{ width: 55, height: 55, bottom: "22%", left: "10%", animationDuration: "18s" }}/>
-        <div className="gear" style={{ width: 90, height: 90, bottom: "8%", right: "5%", animationDuration: "22s", animationDirection: "reverse" }}/>
+        <div className="gear" style={{ width: 80, height: 80, top: "10%", left: "6%", animationDuration: "28s" }}/>
+        <div className="gear" style={{ width: 60, height: 60, bottom: "12%", right: "8%", animationDuration: "22s", animationDirection: "reverse" }}/>
         <div className="deco-content">
           <div className="deco-logo"><span className="g-text">OtoTamirci</span>Online</div>
           <div className="deco-domain">ototamircimonline.com</div>
           <CarHero/>
           <h2 className="deco-h">Yakın ve Tanıdık<br/>Usta Bulma Platformu</h2>
-          <p className="deco-p">Ankara'nın onaylı, referanslı ustalarını tek platformda bulun. Güvenli öde, güvenle tamir ettir.</p>
-          {["Güvenilir usta bulma garantisi", "Şeffaf işçilik ücretleri", "Kolay ödeme sistemi", "Admin onaylı her usta"].map(f => (
+          <p className="deco-p">Ankara'nın onaylı, referanslı ustalarını tek platformda bulun. Şeffaf fiyat, kolay ödeme.</p>
+          {["Onaylı ve referanslı ustalar", "Oto tamir, bakım ve yıkama", "Şeffaf fiyatlandırma", "Randevulu hizmet"].map(f => (
             <div key={f} className="deco-feat"><div className="deco-dot"/>{f}</div>
           ))}
-          <div className="deco-stats">
-            {[["0", "Onaylı Usta"], ["—", "Ort. Puan"], ["0", "Tamamlanan"]].map(([n, l]) => (
-              <div key={l}><div className="deco-stat-n g-text">{n}</div><div className="deco-stat-l">{l}</div></div>
-            ))}
-          </div>
         </div>
       </div>
 
@@ -1295,6 +1301,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   const [view, setView] = useState<"list" | "map">("list");
   const [district, setDistrict] = useState("Tümü");
   const [q, setQ] = useState("");
+  const [catFilter, setCatFilter] = useState<"all" | MasterCategory>("all");
   const [sel, setSel] = useState<Master | null>(null);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
@@ -1303,7 +1310,8 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   const filtered = approved.filter(m => {
     const dm = district === "Tümü" || m.district === district;
     const qm = !q || [m.name, m.specialty, m.district].some(s => s.toLowerCase().includes(q.toLowerCase()));
-    return dm && qm;
+    const cm = catFilter === "all" || (m.category || "tamir") === catFilter;
+    return dm && qm && cm;
   });
   const withDist = filtered.map(m => ({ master: m, distKm: userLoc ? haversineKm(userLoc.lat, userLoc.lng, m.lat, m.lng) : undefined })).sort((a, b) => (a.distKm ?? 999) - (b.distKm ?? 999));
   const myAppts = appointments.filter(a => a.customerId === user.id);
@@ -1363,6 +1371,23 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
               </div>
             </div>
 
+            {/* Kategori sekmeleri */}
+            <div style={{ display: "flex", gap: ".5rem", marginBottom: "1rem", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".25rem" }}>
+              {[
+                { id: "all" as const, label: "Tümü", icon: <List size={14}/> },
+                { id: "tamir" as const, label: "Oto Tamir & Bakım", icon: <Wrench size={14}/> },
+                { id: "yikama" as const, label: "Oto Yıkama", icon: <span>💧</span> },
+              ].map(c => (
+                <button
+                  key={c.id}
+                  onClick={() => setCatFilter(c.id)}
+                  style={{ flex: 1, padding: ".5rem .625rem", background: catFilter === c.id ? "linear-gradient(135deg,var(--bl),var(--ind))" : "transparent", color: catFilter === c.id ? "#fff" : "var(--t2)", border: "none", borderRadius: "var(--r8)", cursor: "pointer", fontFamily: "'Outfit',sans-serif", fontSize: ".8125rem", fontWeight: 600, display: "flex", alignItems: "center", justifyContent: "center", gap: ".375rem", transition: "all .18s" }}
+                >
+                  {c.icon}<span className="cat-tab-label">{c.label}</span>
+                </button>
+              ))}
+            </div>
+
             <div style={{ display: "flex", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", overflow: "hidden", marginBottom: "1rem" }}>
               <Search size={15} style={{ margin: "auto .875rem", color: "var(--t3)", flexShrink: 0 }}/>
               <input style={{ flex: 1, background: "none", border: "none", padding: ".625rem 0", color: "var(--t1)", fontSize: ".9rem", fontFamily: "'Outfit',sans-serif", outline: "none" }} placeholder="İsim, uzmanlık, semt..." value={q} onChange={e => setQ(e.target.value)}/>
@@ -1386,6 +1411,11 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                           <div style={{ fontWeight: 700, fontSize: ".9375rem" }} className="ellipsis">{m.name}</div>
                           <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{m.specialty}</div>
                           <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem" }}><MapPin size={10}/>{m.district}</div>
+                          <div style={{ marginTop: ".375rem" }}>
+                            <span className={`cat-badge cat-${m.category || "tamir"}`}>
+                              {(m.category || "tamir") === "tamir" ? <><Wrench size={10}/>Tamir & Bakım</> : <>💧 Yıkama</>}
+                            </span>
+                          </div>
                         </div>
                       </div>
                       <div style={{ display: "flex", gap: ".875rem", marginBottom: ".875rem", flexWrap: "wrap" }}>
@@ -1838,7 +1868,8 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 }) {
   type T = "dashboard" | "masters" | "addMaster" | "appointments" | "users";
   const [tab, setTab] = useState<T>("dashboard");
-  const [fN, setFN] = useState(""); const [fE, setFE] = useState(""); const [fPh, setFPh] = useState(""); const [fPw, setFPw] = useState(""); const [fSp, setFSp] = useState(""); const [fDist, setFDist] = useState("Çankaya"); const [fBio, setFBio] = useState(""); const [fTel, setFTel] = useState("");
+  const [fN, setFN] = useState(""); const [fE, setFE] = useState(""); const [fPh, setFPh] = useState(""); const [fPw, setFPw] = useState(""); const [fSp, setFSp] = useState(""); const [fDist, setFDist] = useState("Çankaya"); const [fBio, setFBio] = useState(""); const [fTel, setFTel] = useState(""); const [fCat, setFCat] = useState<MasterCategory>("tamir");
+  const [selAppt, setSelAppt] = useState<Appointment | null>(null);
   const [editMaster, setEditMaster] = useState<string | null>(null);
   const [eName, setEName] = useState(""); const [eSpec, setESpec] = useState(""); const [eDist, setEDist] = useState(""); const [eBio, setEBio] = useState(""); const [ePhone, setEPhone] = useState("");
   const [svcMaster, setSvcMaster] = useState<string | null>(null);
@@ -1879,7 +1910,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
     if (users.find(u => u.email === fE)) { toast("Bu e-posta zaten kayıtlı", "err"); return; }
     const mid = "m_" + uid(); const uid2 = "u_" + uid();
     const nu: AppUser = { id: uid2, name: fN, email: fE, phone: fPh, password: fPw, securityAnswer: "yok", role: "master", masterId: mid, createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
-    const nm: Master = { id: mid, userId: uid2, name: fN, avatar: fN.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2), specialty: fSp, district: fDist, rating: 0, completedJobs: 0, isApproved: true, isPending: false, services: [], bio: fBio, phone: fTel || fPh, email: fE, lat: ANKARA_CENTER.lat + (Math.random()-.5)*.1, lng: ANKARA_CENTER.lng + (Math.random()-.5)*.15, availability: { days: [], slots: [] } };
+    const nm: Master = { id: mid, userId: uid2, name: fN, avatar: fN.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2), specialty: fSp, district: fDist, rating: 0, completedJobs: 0, isApproved: true, isPending: false, services: [], bio: fBio, phone: fTel || fPh, email: fE, lat: ANKARA_CENTER.lat + (Math.random()-.5)*.1, lng: ANKARA_CENTER.lng + (Math.random()-.5)*.15, availability: { days: [], slots: [] }, category: fCat };
     supabase?.insert("app_users", userToDB(nu)).catch(console.error);
     supabase?.insert("masters", masterToDB(nm)).catch(console.error);
     setUsers(prev => { const n = [...prev, nu]; saveLS(LS.users, n); return n; });
@@ -1911,6 +1942,11 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
         </div>
 
         <div className="content">
+          {/* Mobil önizleme butonları (tablet/mobil) */}
+          <div className="admin-mob-preview">
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => onPreview("customer")}><User size={13}/>Müşteri Önizle</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => onPreview("master")}><Wrench size={13}/>Usta Önizle</button>
+          </div>
           {/* DASHBOARD */}
           {tab === "dashboard" && (<>
             <div className="page-header"><div className="page-title">Dashboard</div><div className="page-sub">OtoTamirciOnline.com yönetim paneli</div></div>
@@ -2050,6 +2086,13 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                 <div className="fg"><label className="fl">Uzmanlık *</label><input className="fi" value={fSp} onChange={e => setFSp(e.target.value)} placeholder="Otomotiv Tamiri"/></div>
                 <div className="fg"><label className="fl">Semt</label><select className="fi" value={fDist} onChange={e => setFDist(e.target.value)}>{DISTRICTS.filter(d => d !== "Tümü").map(d => <option key={d}>{d}</option>)}</select></div>
               </div>
+              <div className="fg">
+                <label className="fl">Kategori *</label>
+                <div style={{ display: "flex", gap: ".5rem" }}>
+                  <button type="button" className={`btn ${fCat === "tamir" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1 }} onClick={() => setFCat("tamir")}><Wrench size={13}/>Oto Tamir & Bakım</button>
+                  <button type="button" className={`btn ${fCat === "yikama" ? "btn-primary" : "btn-ghost"}`} style={{ flex: 1 }} onClick={() => setFCat("yikama")}>💧 Oto Yıkama</button>
+                </div>
+              </div>
               <div className="fr2">
                 <div className="fg"><label className="fl">Profil Telefonu</label><input className="fi" value={fTel} onChange={e => setFTel(e.target.value)} placeholder="İş telefonu"/></div>
               </div>
@@ -2063,29 +2106,80 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 
           {/* RANDEVULAR */}
           {tab === "appointments" && (<>
-            <div className="page-header"><div className="page-title">Randevu Yönetimi</div><div className="page-sub">{appointments.length} toplam randevu</div></div>
+            <div className="page-header"><div className="page-title">Randevu Yönetimi</div><div className="page-sub">{appointments.length} toplam randevu · en yeni üstte</div></div>
             {appointments.length === 0 ? <div className="empty-state"><Clock size={36}/><h3>Randevu yok</h3></div> : (
-              <div className="tbl-wrap">
-                <table className="tbl">
-                  <thead><tr><th>Müşteri</th><th>Usta</th><th>Hizmetler</th><th>Saat</th><th>Tutar</th><th>Ödeme</th><th>Durum</th><th>İşlem</th></tr></thead>
-                  <tbody>
-                    {appointments.map(a => (
-                      <tr key={a.id}>
-                        <td><div style={{ fontWeight: 600 }}>{a.customerName}</div><div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.customerPhone}</div></td>
-                        <td><strong>{a.masterName}</strong></td>
-                        <td style={{ color: "var(--t2)", fontSize: ".8rem", maxWidth: 140 }} className="ellipsis">{a.services.map(s => s.name).join(", ")}</td>
-                        <td style={{ fontSize: ".8rem", color: "var(--t2)", whiteSpace: "nowrap" }}>{a.timeSlot}<br/><span style={{ color: "var(--t3)" }}>{a.date}</span></td>
-                        <td><strong style={{ color: "#60a5fa" }}>{fmtTL(a.total)}</strong></td>
-                        <td style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.payment ? `*${a.payment.cardLast4}` : "—"}</td>
-                        <td><span className={`status s-${a.status}`}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : a.status === "paid" ? "Ödendi" : "Tamamlandı"}</span></td>
-                        <td><div style={{ display: "flex", gap: ".3rem" }}>
-                          {a.status === "pending" && <><button className="btn btn-success btn-xs" onClick={() => updateAppt(a.id, "approved")}><Check size={10}/></button><button className="btn btn-danger btn-xs" onClick={() => updateAppt(a.id, "rejected")}><X size={10}/></button></>}
-                          <button className="btn btn-danger btn-xs" onClick={() => deleteAppt(a.id)}><Trash2 size={10}/></button>
-                        </div></td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+              <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
+                {[...appointments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(a => (
+                  <div key={a.id} className="card" style={{ cursor: "pointer", padding: "1rem", borderLeft: `3px solid ${a.status === "pending" ? "var(--warn)" : a.status === "approved" ? "var(--ok)" : a.status === "rejected" ? "var(--err)" : a.status === "paid" ? "#60a5fa" : "var(--ok)"}` }} onClick={() => setSelAppt(a)}>
+                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: ".75rem", flexWrap: "wrap" }}>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: ".9375rem", marginBottom: ".125rem" }}>{a.customerName} → {a.masterName}</div>
+                        <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem" }}>{a.services.map(s => s.name).join(", ")}</div>
+                        <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", gap: ".625rem", flexWrap: "wrap" }}>
+                          <span><Clock size={10} style={{ verticalAlign: "middle", marginRight: 2 }}/>{a.timeSlot} · {a.date}</span>
+                          <span style={{ color: "var(--t3)" }}>Oluşturuldu: {new Date(a.createdAt).toLocaleString("tr-TR", { dateStyle: "short", timeStyle: "short" })}</span>
+                        </div>
+                      </div>
+                      <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".375rem", flexShrink: 0 }}>
+                        <strong style={{ color: "#60a5fa", fontSize: "1rem" }}>{fmtTL(a.total)}</strong>
+                        <span className={`status s-${a.status}`} style={{ fontSize: ".6875rem" }}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : a.status === "paid" ? "Ödendi" : "Tamamlandı"}</span>
+                      </div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+
+            {/* Randevu detay modalı */}
+            {selAppt && (
+              <div className="overlay" onClick={() => setSelAppt(null)}>
+                <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+                  <div className="modal-head">
+                    <h3>Randevu Detayı</h3>
+                    <button className="close-btn" onClick={() => setSelAppt(null)}><X size={16}/></button>
+                  </div>
+                  <div className="modal-body">
+                    <div style={{ display: "grid", gap: ".75rem" }}>
+                      {[
+                        ["Müşteri", `${selAppt.customerName} · ${selAppt.customerPhone}`],
+                        ["Usta", selAppt.masterName],
+                        ["Tarih / Saat", `${selAppt.date} · ${selAppt.timeSlot}`],
+                        ["Oluşturuldu", new Date(selAppt.createdAt).toLocaleString("tr-TR")],
+                        ["Durum", (selAppt.status === "pending" ? "Bekliyor" : selAppt.status === "approved" ? "Onaylı" : selAppt.status === "rejected" ? "Reddedildi" : selAppt.status === "paid" ? "Ödendi" : "Tamamlandı")],
+                        ["Tutar", fmtTL(selAppt.total)],
+                        ["Ödeme", selAppt.payment ? `Kart *${selAppt.payment.cardLast4} · ${fmtTL(selAppt.payment.amount)} · ${new Date(selAppt.payment.paidAt).toLocaleString("tr-TR")}` : "Henüz ödeme yok"],
+                      ].map(([k, v]) => (
+                        <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: ".75rem", paddingBottom: ".5rem", borderBottom: "1px solid var(--gb)", fontSize: ".875rem" }}>
+                          <span style={{ color: "var(--t2)", flexShrink: 0 }}>{k}</span>
+                          <strong style={{ textAlign: "right", wordBreak: "break-word" }}>{v}</strong>
+                        </div>
+                      ))}
+                      <div>
+                        <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".375rem", fontWeight: 600 }}>Hizmetler</div>
+                        {selAppt.services.map(s => (
+                          <div key={s.id} style={{ display: "flex", justifyContent: "space-between", fontSize: ".875rem", padding: ".375rem 0", borderBottom: "1px solid var(--gb)" }}>
+                            <span>{s.name}</span>
+                            <strong>{fmtTL(s.price)}</strong>
+                          </div>
+                        ))}
+                      </div>
+                      {selAppt.notes && (
+                        <div>
+                          <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem", fontWeight: 600 }}>Müşteri Notu</div>
+                          <div style={{ fontSize: ".875rem", color: "var(--t1)", background: "var(--g)", padding: ".625rem .75rem", borderRadius: "var(--r8)" }}>{selAppt.notes}</div>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                  <div className="modal-foot">
+                    {selAppt.status === "pending" && (<>
+                      <button className="btn btn-success" onClick={() => { updateAppt(selAppt.id, "approved"); setSelAppt(null); }}><Check size={13}/>Onayla</button>
+                      <button className="btn btn-danger" onClick={() => { updateAppt(selAppt.id, "rejected"); setSelAppt(null); }}><X size={13}/>Reddet</button>
+                    </>)}
+                    <button className="btn btn-danger" onClick={() => { deleteAppt(selAppt.id); setSelAppt(null); }}><Trash2 size={13}/>Sil</button>
+                    <button className="btn btn-ghost" onClick={() => setSelAppt(null)}>Kapat</button>
+                  </div>
+                </div>
               </div>
             )}
           </>)}
