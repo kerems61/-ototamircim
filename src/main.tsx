@@ -25,9 +25,9 @@ import App from './App.tsx'
  *  5. Aşağıdaki üç değeri doldur. Üçü de boş kalırsa demo modu çalışır
  *     (kod UI'da gösterilir, mail atılmaz).
  * ════════════════════════════════════════════════════════════════════ */
-const EMAILJS_SERVICE_ID  = ""; // örn: "service_xxxxxxx"
+const EMAILJS_SERVICE_ID  = "service_ihowvvk"; // örn: "service_xxxxxxx"
 const EMAILJS_TEMPLATE_ID = ""; // örn: "template_xxxxxxx"
-const EMAILJS_PUBLIC_KEY  = ""; // örn: "abcDEFghi123456"
+const EMAILJS_PUBLIC_KEY  = "mRsrIQuNZvMKgoiCS"; // örn: "abcDEFghi123456"
 
 declare global {
   interface Window {

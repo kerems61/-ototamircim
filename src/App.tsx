@@ -1214,30 +1214,97 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
 // ══════════════════════════════════════════════════════════════════
 // MÜŞTERİ — Usta Detay Modal
 // ══════════════════════════════════════════════════════════════════
-function MasterModal({ master, user, appointments, setAppointments, setUsers, toast, onClose }: {
+function MasterModal({ master, user, appointments, setAppointments, setUsers, toast, onClose, isGuest = false, onGuestBooked }: {
   master: Master; user: AppUser; appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void; onClose: () => void;
+  isGuest?: boolean;
+  onGuestBooked?: () => void;
 }) {
   const [selected, setSelected] = useState<Service[]>([]);
   const [slot, setSlot] = useState(""); const [date, setDate] = useState(""); const [notes, setNotes] = useState("");
-  const existing = appointments.find(a => a.masterId === master.id && a.customerId === user.id && ["pending", "approved"].includes(a.status));
+  const existing = !isGuest ? appointments.find(a => a.masterId === master.id && a.customerId === user.id && ["pending", "approved"].includes(a.status)) : undefined;
   const total = selected.reduce((s, v) => s + v.price, 0);
   const toggle = (s: Service) => setSelected(prev => prev.find(x => x.id === s.id) ? prev.filter(x => x.id !== s.id) : [...prev, s]);
+
+  // Guest rezervasyon akışı
+  const [guestStep, setGuestStep] = useState<"form" | "info" | "verify" | "done">("form");
+  const [gName, setGName] = useState(""); const [gPhone, setGPhone] = useState(""); const [gEmail, setGEmail] = useState("");
+  const [gErr, setGErr] = useState("");
+  const [gCode, setGCode] = useState(""); const [gEntered, setGEntered] = useState("");
+  const [gSending, setGSending] = useState(false); const [gDemoMode, setGDemoMode] = useState(false); const [gCooldown, setGCooldown] = useState(0);
+
+  useEffect(() => {
+    if (gCooldown <= 0) return;
+    const t = setInterval(() => setGCooldown(c => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [gCooldown]);
+
+  // Türk mobil operatör prefix listesi (5XX ile başlayan geçerli 3 haneli prefix'ler)
+  const TR_MOBILE_PREFIXES = [
+    "500","501","502","503","504","505","506","507","508","509",
+    "530","531","532","533","534","535","536","537","538","539",
+    "540","541","542","543","544","545","546","547","548","549",
+    "551","552","553","554","555","556","557","558","559",
+  ];
+  const validateTRPhone = (raw: string): { ok: boolean; digits: string; err?: string } => {
+    const digits = raw.replace(/\D/g, "").replace(/^90/, "").replace(/^0/, "");
+    if (digits.length !== 10) return { ok: false, digits, err: "Telefon 10 haneli olmalı (5xx xxx xx xx)" };
+    const prefix = digits.slice(0, 3);
+    if (!TR_MOBILE_PREFIXES.includes(prefix)) return { ok: false, digits, err: `Geçersiz operatör prefixi (${prefix}). Gerçek bir mobil numara girin.` };
+    return { ok: true, digits: "0" + digits };
+  };
+
+  const createAppointment = (customerId: string, customerName: string, customerPhone: string) => {
+    const av = master.availability;
+    const dayName = new Date(date || Date.now()).toLocaleDateString("tr-TR", { weekday: "long" });
+    const autoApprove = av?.slots?.includes(slot) && (av?.days?.length === 0 || av?.days?.some(d => dayName.toLowerCase().startsWith(d.toLowerCase().slice(0, 3))));
+    const appt: Appointment = { id: "appt_" + uid(), customerId, customerName, customerPhone, masterId: master.id, masterName: master.name, services: selected, total, timeSlot: slot, date: date || new Date().toLocaleDateString("tr-TR"), status: autoApprove ? "approved" : "pending", createdAt: new Date(), notes };
+    supabase?.insert("appointments", apptToDB(appt)).catch(console.error);
+    setAppointments(prev => { const n = [...prev, appt]; saveLS(LS.appointments, n); return n; });
+    return { appt, autoApprove };
+  };
 
   const submit = () => {
     if (!selected.length) { toast("En az bir hizmet seçin", "err"); return; }
     if (!slot) { toast("Saat aralığı seçin", "err"); return; }
-    const av = master.availability;
-    const dayName = new Date(date || Date.now()).toLocaleDateString("tr-TR", { weekday: "long" });
-    const autoApprove = av?.slots?.includes(slot) && (av?.days?.length === 0 || av?.days?.some(d => dayName.toLowerCase().startsWith(d.toLowerCase().slice(0, 3))));
-    const appt: Appointment = { id: "appt_" + uid(), customerId: user.id, customerName: user.name, customerPhone: user.phone, masterId: master.id, masterName: master.name, services: selected, total, timeSlot: slot, date: date || new Date().toLocaleDateString("tr-TR"), status: autoApprove ? "approved" : "pending", createdAt: new Date(), notes };
-    supabase?.insert("appointments", apptToDB(appt)).catch(console.error);
+    if (isGuest) { setGuestStep("info"); return; }
+    const { autoApprove } = createAppointment(user.id, user.name, user.phone);
     supabase?.update("app_users", user.id, { appointment_count: user.appointmentCount + 1 }).catch(console.error);
-    setAppointments(prev => { const n = [...prev, appt]; saveLS(LS.appointments, n); return n; });
     setUsers(prev => { const n = prev.map(u => u.id === user.id ? { ...u, appointmentCount: u.appointmentCount + 1 } : u); saveLS(LS.users, n); return n; });
     toast(autoApprove ? "Randevu otomatik onaylandı!" : "Randevu talebi usta onayına gönderildi!", "ok"); onClose();
+  };
+
+  const sendGuestCode = async () => {
+    if (!gName.trim()) { setGErr("Ad soyad zorunlu"); return; }
+    const ph = validateTRPhone(gPhone);
+    if (!ph.ok) { setGErr(ph.err || "Telefon geçersiz"); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(gEmail.trim().toLowerCase())) { setGErr("Geçerli e-posta girin"); return; }
+    setGErr(""); setGSending(true);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setGCode(code); setGEntered("");
+    const email = gEmail.trim().toLowerCase();
+    const w = window as unknown as { emailjs?: { send: (s: string, t: string, p: Record<string, string>, k: string) => Promise<unknown> }; EMAILJS_CONFIG?: { serviceId: string; templateId: string; publicKey: string } };
+    const cfg = w.EMAILJS_CONFIG;
+    let sent = false;
+    if (w.emailjs && cfg?.serviceId && cfg?.templateId && cfg?.publicKey) {
+      try { await w.emailjs.send(cfg.serviceId, cfg.templateId, { to_email: email, code, app_name: "OtoTamirciOnline", from_name: "OtoTamirciOnline" }, cfg.publicKey); sent = true; }
+      catch (err) { console.warn("EmailJS hata:", err); setGErr("Mail gönderilemedi, tekrar deneyin."); setGSending(false); return; }
+    } else {
+      console.info("[Demo] Kod:", code);
+    }
+    setGSending(false); setGDemoMode(!sent); setGCooldown(60); setGuestStep("verify");
+  };
+
+  const confirmGuestBooking = () => {
+    if (gEntered.trim() !== gCode) { setGErr("Kod hatalı"); return; }
+    const ph = validateTRPhone(gPhone);
+    const gid = "guest_" + uid();
+    const { autoApprove } = createAppointment(gid, gName.trim(), ph.digits);
+    setGuestStep("done");
+    toast(autoApprove ? "Randevunuz oluşturuldu ve otomatik onaylandı!" : "Randevu talebiniz gönderildi!", "ok");
+    setTimeout(() => { onGuestBooked?.(); }, 1800);
   };
 
   return (
@@ -1277,6 +1344,58 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: "column" as const }}>
           <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem" }}>
+            {isGuest && guestStep === "info" && (
+              <div>
+                <div className="card-title"><User size={14}/>İletişim Bilgileriniz</div>
+                <div className="alert a-info" style={{ marginBottom: "1rem" }}>
+                  <Mail size={13}/><span>Ustanızın size ulaşabilmesi için iletişim bilgilerinizi girin. E-postanıza doğrulama kodu gelecek.</span>
+                </div>
+                <div className="fg"><label className="fl">Ad Soyad *</label><input className="fi" placeholder="Adınız Soyadınız" value={gName} onChange={e => setGName(e.target.value)}/></div>
+                <div className="fg"><label className="fl">Telefon * <span style={{ fontSize: ".6875rem", color: "var(--t3)", fontWeight: 500 }}>(Türk mobil numarası)</span></label><input className="fi" placeholder="05xx xxx xx xx" value={gPhone} onChange={e => setGPhone(e.target.value)} inputMode="tel"/></div>
+                <div className="fg"><label className="fl">E-posta * <span style={{ fontSize: ".6875rem", color: "var(--t3)", fontWeight: 500 }}>(doğrulama kodu buraya gelir)</span></label><input className="fi" type="email" placeholder="ornek@mail.com" value={gEmail} onChange={e => setGEmail(e.target.value)}/></div>
+                {gErr && <div className="alert a-err"><AlertCircle size={13}/>{gErr}</div>}
+                <div style={{ background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".75rem", marginTop: ".75rem" }}>
+                  <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem" }}>Randevu Özeti</div>
+                  <div style={{ fontSize: ".8125rem" }}>{master.name} · {slot} · {date || new Date().toLocaleDateString("tr-TR")}</div>
+                  <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginTop: ".25rem" }}>{selected.map(s => s.name).join(", ")} — <strong style={{ color: "#60a5fa" }}>{fmtTL(total)}</strong></div>
+                </div>
+              </div>
+            )}
+            {isGuest && guestStep === "verify" && (
+              <div>
+                <div className="card-title"><Mail size={14}/>E-posta Doğrulama</div>
+                {gSending ? (
+                  <div style={{ textAlign: "center", padding: "1rem" }}>
+                    <div className="spinner" style={{ margin: "0 auto 1rem" }}/>
+                    <div style={{ fontWeight: 700 }}>Kod gönderiliyor...</div>
+                  </div>
+                ) : gDemoMode ? (
+                  <div style={{ background: "rgba(245,158,11,.08)", border: "1px dashed rgba(245,158,11,.4)", borderRadius: "var(--r12)", padding: ".75rem 1rem", fontSize: ".8125rem", color: "#fbbf24", marginBottom: "1rem", lineHeight: 1.55 }}>
+                    <strong>Demo modu:</strong> Mail servisi yapılandırılmadı, kod: <strong style={{ fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".15em" }}>{gCode}</strong>
+                  </div>
+                ) : (
+                  <div className="alert a-ok" style={{ marginBottom: "1rem" }}>
+                    <Mail size={13}/><span><strong>{gEmail}</strong> adresine 6 haneli kod gönderildi. Gelmediyse spam klasörünü kontrol edin.</span>
+                  </div>
+                )}
+                <div className="fg">
+                  <label className="fl">6 Haneli Kod</label>
+                  <input className="fi" value={gEntered} onChange={e => setGEntered(e.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} inputMode="numeric" autoFocus style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.125rem", letterSpacing: ".35em", textAlign: "center" }} placeholder="••••••"/>
+                </div>
+                {gErr && <div className="alert a-err" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>{gErr}</div>}
+                <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={sendGuestCode} disabled={gCooldown > 0 || gSending}>
+                  {gSending ? "Gönderiliyor..." : gCooldown > 0 ? `Yeniden gönder (${gCooldown}sn)` : "Kodu Yeniden Gönder"}
+                </button>
+              </div>
+            )}
+            {isGuest && guestStep === "done" && (
+              <div style={{ textAlign: "center", padding: "2rem 1rem" }}>
+                <div className="success-circle"><Check size={28} style={{ color: "var(--ok)" }}/></div>
+                <h3 style={{ marginBottom: ".5rem" }}>Randevunuz Oluşturuldu!</h3>
+                <p style={{ color: "var(--t2)", fontSize: ".9rem" }}>Ustanız sizinle iletişime geçecek. E-postanıza randevu bilgileri gönderildi.</p>
+              </div>
+            )}
+            {(!isGuest || guestStep === "form") && <>
             {/* Haftalık müsaitlik grid */}
             {(master.availability?.days?.length || master.availability?.slots?.length) ? (() => {
               const todayIdx = dayIdxFromJS(new Date().getDay());
@@ -1378,20 +1497,38 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
                 </div>
               </div>
             </>)}
+            </>}
           </div>
 
           {/* Alt özet */}
           <div style={{ borderTop: "1px solid var(--gb)", padding: "1rem 1.25rem", background: "rgba(0,0,0,.2)", flexShrink: 0 }}>
-            {selected.length > 0 && !existing && (
+            {!isGuest && selected.length > 0 && !existing && (
               <div style={{ display: "flex", justifyContent: "space-between", marginBottom: ".75rem", alignItems: "center" }}>
                 <span style={{ fontSize: ".875rem", color: "var(--t2)" }}>{selected.length} hizmet seçildi</span>
                 <span style={{ fontWeight: 800, fontSize: "1.125rem" }} className="g-text">{fmtTL(total)}</span>
               </div>
             )}
-            {!existing && <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={!selected.length || !slot} onClick={submit}><Clock size={14}/>Randevu Talebi Gönder</button>}
-            {existing && (
+            {!isGuest && !existing && <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={!selected.length || !slot} onClick={submit}><Clock size={14}/>Randevu Talebi Gönder</button>}
+            {!isGuest && existing && (
               <div style={{ display: "flex", alignItems: "center", gap: ".625rem", padding: ".75rem 1rem", background: existing.status === "approved" ? "rgba(16,185,129,.1)" : "rgba(245,158,11,.1)", border: `1px solid ${existing.status === "approved" ? "rgba(16,185,129,.3)" : "rgba(245,158,11,.3)"}`, borderRadius: "var(--r12)", fontSize: ".875rem", fontWeight: 600, color: existing.status === "approved" ? "var(--ok)" : "var(--warn)" }}>
                 {existing.status === "approved" ? <><CheckCircle size={15}/>Randevunuz onaylandı! Belirlenen saatte ustanıza gidebilirsiniz.</> : <><Clock size={15}/>Usta randevunuzu değerlendiriyor...</>}
+              </div>
+            )}
+            {isGuest && guestStep === "form" && (
+              <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={!selected.length || !slot} onClick={submit}>
+                <ChevronRight size={14}/>Devam: İletişim Bilgileri ({fmtTL(total)})
+              </button>
+            )}
+            {isGuest && guestStep === "info" && (
+              <div style={{ display: "flex", gap: ".5rem" }}>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setGuestStep("form")}><ArrowLeft size={14}/>Geri</button>
+                <button className="btn btn-primary" style={{ flex: 2, padding: ".75rem" }} onClick={sendGuestCode} disabled={gSending}><Mail size={14}/>{gSending ? "Gönderiliyor..." : "Kodu Gönder"}</button>
+              </div>
+            )}
+            {isGuest && guestStep === "verify" && (
+              <div style={{ display: "flex", gap: ".5rem" }}>
+                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setGuestStep("info")}><ArrowLeft size={14}/>Geri</button>
+                <button className="btn btn-primary" style={{ flex: 2, padding: ".75rem" }} onClick={confirmGuestBooking} disabled={gEntered.length !== 6}><Check size={14}/>Randevuyu Onayla</button>
               </div>
             )}
           </div>
@@ -1444,11 +1581,13 @@ function ReviewForm({ appt, user, onSubmit }: { appt: Appointment; user: AppUser
 // ══════════════════════════════════════════════════════════════════
 // MÜŞTERİ SAYFASI
 // ══════════════════════════════════════════════════════════════════
-function CustomerPage({ masters, user, setUsers, appointments, setAppointments, reviews, setReviews, toast }: {
+function CustomerPage({ masters, user, setUsers, appointments, setAppointments, reviews, setReviews, toast, isGuest = false, onRequireLogin }: {
   masters: Master[]; user: AppUser; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   appointments: Appointment[]; setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   reviews: Review[]; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void;
+  isGuest?: boolean;
+  onRequireLogin?: () => void;
 }) {
   type T = "find" | "appointments" | "reviews" | "profile";
   const [tab, setTab] = useState<T>("find");
@@ -1467,6 +1606,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   }, []);
 
   const quickBook = (m: Master) => {
+    if (isGuest) { toast("Hızlı randevu için giriş yapın veya usta detayından randevu alın", "info"); onRequireLogin?.(); return; }
     const today = new Date();
     const free = getFreeSlotsForDate(m, today, appointments);
     if (!free.length) { toast("Bu usta bugün müsait değil", "warn"); return; }
@@ -1678,7 +1818,9 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
           {/* RANDEVULARIM */}
           {tab === "appointments" && (<>
             <div className="page-header"><div className="page-title">Randevularım</div></div>
-            {myAppts.length === 0 ? (
+            {isGuest ? (
+              <div className="empty-state"><Clock size={36}/><h3>Randevularınızı görmek için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Kayıt olursanız tüm randevularınızı buradan takip edebilirsiniz.</p><button className="btn btn-primary" onClick={() => onRequireLogin?.()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
+            ) : myAppts.length === 0 ? (
               <div className="empty-state"><Clock size={36}/><h3>Henüz randevunuz yok</h3><p>Usta seçerek ilk randevunuzu oluşturun</p></div>
             ) : myAppts.map(a => {
               const stepInfo: Record<AppointmentStatus, { label: string; color: string; hint: string }> = {
@@ -1719,8 +1861,11 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
               <div className="page-title">Görüş ve Öneriler</div>
               <div className="page-sub">Tamamlanan randevularınızı değerlendirin</div>
             </div>
+            {isGuest && (
+              <div className="empty-state"><Star size={36}/><h3>Değerlendirme için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Tamamlanan randevularınızı ve değerlendirmelerinizi görmek için hesabınıza giriş yapın.</p><button className="btn btn-primary" onClick={() => onRequireLogin?.()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
+            )}
             {/* Değerlendirilecekler */}
-            {myAppts.filter(a => a.status === "completed" && !reviewedApptIds.has(a.id)).length > 0 && (<>
+            {!isGuest && myAppts.filter(a => a.status === "completed" && !reviewedApptIds.has(a.id)).length > 0 && (<>
               <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem", color: "var(--warn)", display: "flex", alignItems: "center", gap: ".5rem" }}>
                 <Star size={14}/> Değerlendirme bekleyen randevular
               </div>
@@ -1730,8 +1875,8 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
               <div className="divider"/>
             </>)}
             {/* Geçmiş Değerlendirmeler */}
-            <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem" }}>Gönderdiğim Değerlendirmeler</div>
-            {myReviews.length === 0 ? (
+            {!isGuest && <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem" }}>Gönderdiğim Değerlendirmeler</div>}
+            {isGuest ? null : myReviews.length === 0 ? (
               <div className="empty-state"><Star size={32}/><h3>Henüz değerlendirme yok</h3><p>Tamamlanan randevuları değerlendirin</p></div>
             ) : myReviews.slice().reverse().map(r => (
               <div key={r.id} className="review-card">
@@ -1748,19 +1893,23 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
           {/* PROFİLİM */}
           {tab === "profile" && (<>
             <div className="page-header"><div className="page-title">Profilim</div></div>
-            <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
-              <div className="stat-card"><div className="stat-val" style={{ color: "#60a5fa" }}>{user.appointmentCount}</div><div className="stat-label">Randevu</div></div>
-              <div className="stat-card"><div className="stat-val" style={{ color: "var(--ok)" }}>{myAppts.filter(a => a.status === "completed").length}</div><div className="stat-label">Tamamlanan</div></div>
-              <div className="stat-card"><div className="stat-val" style={{ color: "var(--warn)" }}>{myAppts.filter(a => a.status === "pending" || a.status === "approved").length}</div><div className="stat-label">Aktif</div></div>
-            </div>
-            <div className="card">
-              <div className="card-title"><User size={14}/>Kişisel Bilgiler</div>
-              {[["Ad Soyad", user.name], ["E-posta", user.email], ["Telefon", user.phone], ["Üyelik", new Date(user.createdAt).toLocaleDateString("tr-TR")]].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: ".5rem 0", borderBottom: "1px solid var(--gb)", fontSize: ".9rem", flexWrap: "wrap", gap: ".5rem" }}>
-                  <span style={{ color: "var(--t2)", fontWeight: 500 }}>{k}</span><strong className="ellipsis" style={{ maxWidth: "60%" }}>{v}</strong>
-                </div>
-              ))}
-            </div>
+            {isGuest ? (
+              <div className="empty-state"><User size={36}/><h3>Profil için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Kayıt olursanız tüm randevularınızı takip edebilir, hızlı randevu alabilirsiniz.</p><button className="btn btn-primary" onClick={() => onRequireLogin?.()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
+            ) : (<>
+              <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+                <div className="stat-card"><div className="stat-val" style={{ color: "#60a5fa" }}>{user.appointmentCount}</div><div className="stat-label">Randevu</div></div>
+                <div className="stat-card"><div className="stat-val" style={{ color: "var(--ok)" }}>{myAppts.filter(a => a.status === "completed").length}</div><div className="stat-label">Tamamlanan</div></div>
+                <div className="stat-card"><div className="stat-val" style={{ color: "var(--warn)" }}>{myAppts.filter(a => a.status === "pending" || a.status === "approved").length}</div><div className="stat-label">Aktif</div></div>
+              </div>
+              <div className="card">
+                <div className="card-title"><User size={14}/>Kişisel Bilgiler</div>
+                {[["Ad Soyad", user.name], ["E-posta", user.email], ["Telefon", user.phone], ["Üyelik", new Date(user.createdAt).toLocaleDateString("tr-TR")]].map(([k, v]) => (
+                  <div key={k} style={{ display: "flex", justifyContent: "space-between", padding: ".5rem 0", borderBottom: "1px solid var(--gb)", fontSize: ".9rem", flexWrap: "wrap", gap: ".5rem" }}>
+                    <span style={{ color: "var(--t2)", fontWeight: 500 }}>{k}</span><strong className="ellipsis" style={{ maxWidth: "60%" }}>{v}</strong>
+                  </div>
+                ))}
+              </div>
+            </>)}
           </>)}
         </div>
       </div>
@@ -1775,7 +1924,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
         ))}
       </nav>
 
-      {sel && <MasterModal master={sel} user={user} appointments={appointments} setAppointments={setAppointments} setUsers={setUsers} toast={toast} onClose={() => setSel(null)}/>}
+      {sel && <MasterModal master={sel} user={user} appointments={appointments} setAppointments={setAppointments} setUsers={setUsers} toast={toast} onClose={() => setSel(null)} isGuest={isGuest} onGuestBooked={() => setSel(null)}/>}
     </div>
   );
 }
@@ -2619,6 +2768,7 @@ export default function App() {
   const [isOnline, setIsOnline] = useState(HAS_SUPABASE);
   const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("oto_theme") as "dark"|"light") || "dark");
   const [showAbout, setShowAbout] = useState(false);
+  const [showAuth, setShowAuth] = useState(false);
   const [reviews, setReviews] = useState<Review[]>(() => loadLS<Review[]>(LS.reviews, []));
 
   // Tema class'ını body'e uygula
@@ -2671,16 +2821,66 @@ export default function App() {
   }, []);
   const removeToast = useCallback((id: number) => setToasts(prev => prev.filter(t => t.id !== id)), []);
 
-  // Auth olmadan göster
-  if (!currentUser) return (
-    <div>
-      <style>{CSS}</style>
-      <AuthScreen users={users} setUsers={setUsers} onLogin={setCurrentUser}/>
-      <ToastContainer items={toasts} remove={removeToast}/>
-    </div>
-  );
-
   const roleLabel: Record<Role, string> = { admin: "Admin", master: "Usta", customer: "Müşteri" };
+
+  // Guest (login olmadan) — siteye giren herkes ustaları görür
+  if (!currentUser) {
+    const guestUser: AppUser = { id: "guest", name: "Misafir", email: "", phone: "", password: "", securityAnswer: "", role: "customer", createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
+    return (
+      <div className="app">
+        <style>{CSS}</style>
+        <nav className="topnav">
+          <div className="nav-logo">
+            <div className="nav-logo-dot"/>
+            <span>OtoTamirci<span className="nav-logo-text">Online</span></span>
+          </div>
+          <button className="about-btn nav-hide-mob" onClick={() => setShowAbout(true)}>Hakkımızda</button>
+          <div className="nav-spacer"/>
+          <div className="nav-user">
+            <button className="theme-btn nav-hide-mob" onClick={toggleTheme} title="Tema değiştir">
+              {theme === "dark" ? "☀️ Açık" : "🌙 Koyu"}
+            </button>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAuth(true)} style={{ padding: ".3125rem .875rem" }}>
+              <User size={13}/>Giriş Yap / Kayıt
+            </button>
+          </div>
+        </nav>
+        {showAbout && (
+          <div className="overlay" onClick={() => setShowAbout(false)}>
+            <div className="modal" style={{ maxWidth: 560 }} onClick={e => e.stopPropagation()}>
+              <div className="modal-head"><h3>Hakkımızda</h3><button className="close-btn" onClick={() => setShowAbout(false)}><X size={16}/></button></div>
+              <div className="modal-body">
+                <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
+                  <CarHero/>
+                  <div style={{ fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-.02em", marginTop: ".5rem" }}><span className="g-text">OtoTamirci</span>Online</div>
+                  <div style={{ fontSize: ".8125rem", color: "var(--t3)", marginTop: ".25rem" }}>ototamircimonline.com</div>
+                </div>
+                <p style={{ color: "var(--t2)", lineHeight: 1.8, fontSize: ".9rem" }}>
+                  OtoTamirciOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ustalarla buluşturan dijital platformdur.
+                </p>
+              </div>
+            </div>
+          </div>
+        )}
+        <CustomerPage
+          masters={masters} user={guestUser} setUsers={setUsers}
+          appointments={appointments} setAppointments={setAppointments}
+          reviews={reviews} setReviews={setReviews} toast={addToast}
+          isGuest
+          onRequireLogin={() => setShowAuth(true)}
+        />
+        <Footer/>
+        {showAuth && (
+          <div className="overlay" onClick={() => setShowAuth(false)} style={{ padding: 0 }}>
+            <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "95dvh", overflow: "auto" }}>
+              <AuthScreen users={users} setUsers={setUsers} onLogin={u => { setCurrentUser(u); setShowAuth(false); }}/>
+            </div>
+          </div>
+        )}
+        <ToastContainer items={toasts} remove={removeToast}/>
+      </div>
+    );
+  }
 
   // Önizleme modu için ghost kullanıcı
   const ghostMaster = previewMode === "master" ? masters.find(m => m.isApproved) : null;
