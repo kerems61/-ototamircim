@@ -61,13 +61,11 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import {
   MapPin, CheckCircle, XCircle, Clock, X, User, Shield,
-  Wrench, Search, Zap, Award, Bell, Plus, Lock, Check,
+  Wrench, Award, Bell, Plus, Check,
   AlertCircle, Briefcase, BarChart2, Trash2, Edit3, Eye, EyeOff,
   LogOut, Navigation, Map, List, Phone, Mail, Save, UserPlus,
-  Package, CreditCard, Car, ArrowLeft, BadgeCheck,
-  HelpCircle, KeyRound, Receipt, Home, Settings,
-  ChevronDown, Menu, ChevronRight, Star, TrendingUp,
-  RefreshCw, Database, Wifi, WifiOff
+  Package, Search, ArrowLeft, HelpCircle, KeyRound,
+  ChevronRight, Star, TrendingUp, Wifi, WifiOff
 } from "lucide-react";
 
 // ══════════════════════════════════════════════════════════════════
@@ -116,7 +114,7 @@ const supabase = HAS_SUPABASE ? {
 // TİP TANIMLAMALARI
 // ══════════════════════════════════════════════════════════════════
 type Role = "admin" | "master" | "customer";
-type AppointmentStatus = "pending" | "approved" | "rejected" | "paid" | "completed";
+type AppointmentStatus = "pending" | "approved" | "rejected" | "completed";
 
 interface Service {
   id: string;
@@ -177,7 +175,6 @@ interface Appointment {
   status: AppointmentStatus;
   createdAt: Date;
   notes?: string;
-  payment?: { transactionId: string; cardLast4: string; installments: number; amount: number; paidAt: Date };
 }
 
 interface ToastItem { id: number; msg: string; type: "ok" | "err" | "info" | "warn"; }
@@ -285,13 +282,12 @@ const apptFromDB = (row: DBRow): Appointment => ({
   status: (row.status as AppointmentStatus) || "pending",
   createdAt: new Date((row.created_at as string) || Date.now()),
   notes: (row.notes as string) || undefined,
-  payment: (row.payment as Appointment["payment"]) || undefined,
 });
 const apptToDB = (a: Appointment): DBRow => ({
   id: a.id, customer_id: a.customerId, customer_name: a.customerName,
   customer_phone: a.customerPhone, master_id: a.masterId, master_name: a.masterName,
   services: a.services, total: a.total, time_slot: a.timeSlot, date: a.date,
-  status: a.status, notes: a.notes || null, payment: a.payment || null,
+  status: a.status, notes: a.notes || null,
 });
 
 // ══════════════════════════════════════════════════════════════════
@@ -569,9 +565,40 @@ const CSS = `
   @media(max-width:767px){.admin-mob-preview{display:flex;}}
 
   /* ── HARİTA ── */
-  .map-wrap{border-radius:var(--r16);overflow:hidden;border:1px solid var(--gb);}
+  .map-wrap{border-radius:var(--r16);overflow:hidden;border:1px solid var(--gb);position:relative;}
   #leaflet-map{height:360px;width:100%;background:var(--bg3);}
   @media(min-width:640px){#leaflet-map{height:460px;}}
+  .map-lock{position:absolute;inset:0;z-index:400;background:rgba(5,9,15,.55);backdrop-filter:blur(2px);display:flex;align-items:center;justify-content:center;cursor:pointer;transition:opacity .2s;}
+  .map-lock-inner{background:rgba(13,22,41,.92);border:1px solid var(--gb);border-radius:999px;padding:.625rem 1.25rem;color:var(--t1);font-weight:700;font-size:.875rem;display:flex;align-items:center;gap:.5rem;box-shadow:var(--shadow-lg);}
+  .map-picker{height:420px;}
+  @media(max-width:640px){.map-picker{height:320px;}}
+
+  /* ── CANLI ROZET & MÜSAİTLİK ── */
+  .live-badge{display:inline-flex;align-items:center;gap:.35rem;padding:.25rem .625rem;border-radius:99px;font-size:.6875rem;font-weight:800;letter-spacing:.04em;text-transform:uppercase;background:linear-gradient(135deg,rgba(16,185,129,.18),rgba(16,185,129,.08));border:1px solid rgba(16,185,129,.45);color:#34d399;box-shadow:0 0 14px rgba(16,185,129,.25);}
+  .live-dot{width:7px;height:7px;border-radius:50%;background:#10b981;box-shadow:0 0 0 0 rgba(16,185,129,.6);animation:livePulse 1.8s ease-in-out infinite;}
+  @keyframes livePulse{0%{box-shadow:0 0 0 0 rgba(16,185,129,.6);}70%{box-shadow:0 0 0 10px rgba(16,185,129,0);}100%{box-shadow:0 0 0 0 rgba(16,185,129,0);}}
+  .avail-block{background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);padding:.625rem .75rem;margin-bottom:.75rem;}
+  .avail-row{display:flex;align-items:center;gap:.5rem;margin-bottom:.375rem;}
+  .avail-row:last-child{margin-bottom:0;}
+  .avail-label{font-size:.6875rem;font-weight:700;color:var(--t2);letter-spacing:.05em;text-transform:uppercase;min-width:42px;}
+  .avail-slots{display:flex;gap:.25rem;flex-wrap:wrap;flex:1;}
+  .avail-slot{font-size:.6875rem;font-weight:700;padding:.1875rem .4375rem;border-radius:6px;font-variant-numeric:tabular-nums;}
+  .avail-slot.free{background:rgba(16,185,129,.15);border:1px solid rgba(16,185,129,.35);color:#34d399;}
+  .avail-slot.busy{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);color:#f87171;text-decoration:line-through;opacity:.7;}
+  .avail-slot.off{background:var(--g);border:1px solid var(--gb);color:var(--t3);opacity:.55;}
+  .avail-empty{font-size:.75rem;color:var(--t3);font-style:italic;}
+  .quick-book-btn{background:linear-gradient(135deg,rgba(16,185,129,.2),rgba(16,185,129,.08));border:1px solid rgba(16,185,129,.45);color:#34d399;border-radius:var(--r8);padding:.4375rem .75rem;font-size:.75rem;font-weight:700;cursor:pointer;display:inline-flex;align-items:center;gap:.3rem;font-family:'Outfit',sans-serif;transition:all .15s;}
+  .quick-book-btn:hover{background:rgba(16,185,129,.18);}
+  .quick-book-btn:disabled{opacity:.4;cursor:not-allowed;}
+
+  /* ── HAFTALIK MÜSAİTLİK GRID ── */
+  .week-grid{display:grid;grid-template-columns:48px repeat(7,1fr);gap:3px;font-size:.625rem;}
+  .week-head{font-weight:700;color:var(--t2);text-align:center;padding:.25rem 0;letter-spacing:.04em;text-transform:uppercase;}
+  .week-time{color:var(--t3);padding:.25rem 0;text-align:right;padding-right:.375rem;}
+  .week-cell{border-radius:4px;height:22px;}
+  .week-cell.on{background:rgba(16,185,129,.35);border:1px solid rgba(16,185,129,.5);}
+  .week-cell.off{background:var(--g);border:1px solid var(--gb);}
+  .week-cell.today{box-shadow:inset 0 0 0 1px rgba(37,99,235,.5);}
   .leaflet-popup-content-wrapper{background:var(--bg3)!important;border:1px solid var(--gb)!important;border-radius:var(--r12)!important;box-shadow:var(--shadow-lg)!important;}
   .leaflet-popup-tip{background:var(--bg3)!important;}
   .leaflet-popup-content{color:var(--t1)!important;font-family:'Outfit',sans-serif!important;margin:10px 14px!important;font-size:13px!important;}
@@ -696,6 +723,35 @@ function haversineKm(la1: number, lo1: number, la2: number, lo2: number) {
 const fmtTL = (n: number) => n.toLocaleString("tr-TR", { maximumFractionDigits: 0 }) + " ₺";
 const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
 
+/** JS getDay() → DAYS[] indeksi (Pzt=0). */
+const dayIdxFromJS = (d: number) => (d + 6) % 7;
+/** Şu anki zaman dilimini TIME_SLOTS içinden bul. */
+const currentSlot = (now = new Date()): string | null => {
+  const h = now.getHours();
+  return TIME_SLOTS.find(s => { const [a, b] = s.split("-").map(x => parseInt(x)); return h >= a && h < b; }) || null;
+};
+/** Ustanın ayarlı günler + saatleri ile şu anın kesişimi var mı? */
+const isMasterLiveNow = (m: Master, now = new Date()): boolean => {
+  if (!m.availability?.days?.length || !m.availability?.slots?.length) return false;
+  const todayName = DAYS[dayIdxFromJS(now.getDay())];
+  if (!m.availability.days.includes(todayName)) return false;
+  const slot = currentSlot(now);
+  return !!slot && m.availability.slots.includes(slot);
+};
+/** Belirli tarih için ustanın müsait (boş) saat aralıkları. */
+const getFreeSlotsForDate = (m: Master, date: Date, appointments: Appointment[]): string[] => {
+  if (!m.availability?.slots?.length) return [];
+  const dName = DAYS[dayIdxFromJS(date.getDay())];
+  if (m.availability.days.length && !m.availability.days.includes(dName)) return [];
+  const dateStr = date.toLocaleDateString("tr-TR");
+  const taken = new Set(
+    appointments
+      .filter(a => a.masterId === m.id && a.date === dateStr && (a.status === "pending" || a.status === "approved"))
+      .map(a => a.timeSlot)
+  );
+  return m.availability.slots.filter(s => !taken.has(s));
+};
+
 // ══════════════════════════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════════════════════════
@@ -729,14 +785,39 @@ function MasterMap({ markers, userLoc, onSelect }: {
 }) {
   const ref = useRef<HTMLDivElement>(null);
   const inst = useRef<unknown>(null);
+  const [active, setActive] = useState(false);
+
   useEffect(() => {
     const L = (window as unknown as Record<string, unknown>).L as Record<string, unknown>;
     if (!L || !ref.current || inst.current) return;
-    const map = (L.map as (el: HTMLElement, opts: unknown) => unknown)(ref.current, { center: [ANKARA_CENTER.lat, ANKARA_CENTER.lng], zoom: 12 });
+    const map = (L.map as (el: HTMLElement, opts: unknown) => unknown)(ref.current, {
+      center: [ANKARA_CENTER.lat, ANKARA_CENTER.lng], zoom: 12,
+      scrollWheelZoom: false, dragging: false, tap: false, touchZoom: true, doubleClickZoom: true,
+    });
     (L.tileLayer as (url: string, opts: unknown) => { addTo: (m: unknown) => void })("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { attribution: "© OSM © CARTO", maxZoom: 19 }).addTo(map);
     inst.current = map;
     return () => { (map as { remove: () => void }).remove(); inst.current = null; };
   }, []);
+
+  // Aktif/pasif toggle — haritayı dokunuşla aç, dışarı tıklayınca kilitle
+  useEffect(() => {
+    const m = inst.current as { dragging: { enable: () => void; disable: () => void }; scrollWheelZoom: { enable: () => void; disable: () => void } } | null;
+    if (!m) return;
+    if (active) { m.dragging.enable(); m.scrollWheelZoom.enable(); }
+    else { m.dragging.disable(); m.scrollWheelZoom.disable(); }
+  }, [active]);
+
+  // Dışarı tıklanınca tekrar kilitle
+  useEffect(() => {
+    if (!active) return;
+    const handler = (e: MouseEvent | TouchEvent) => {
+      if (ref.current && !ref.current.parentElement?.contains(e.target as Node)) setActive(false);
+    };
+    document.addEventListener("mousedown", handler);
+    document.addEventListener("touchstart", handler, { passive: true });
+    return () => { document.removeEventListener("mousedown", handler); document.removeEventListener("touchstart", handler); };
+  }, [active]);
+
   useEffect(() => {
     const L = (window as unknown as Record<string, unknown>).L as Record<string, unknown>;
     if (!L || !inst.current) return;
@@ -758,168 +839,91 @@ function MasterMap({ markers, userLoc, onSelect }: {
       (um.addTo(inst.current) as unknown as { bindPopup: (html: string) => void }).bindPopup("📍 Konumunuz");
     }
   }, [markers, userLoc, onSelect]);
-  return <div className="map-wrap"><div ref={ref} id="leaflet-map" /></div>;
+  return (
+    <div className="map-wrap">
+      <div ref={ref} id="leaflet-map" style={{ touchAction: active ? "none" : "pan-y" }} />
+      {!active && (
+        <div className="map-lock" onClick={() => setActive(true)} onTouchStart={() => setActive(true)}>
+          <div className="map-lock-inner"><Map size={14}/>Haritayı aktifleştirmek için dokunun</div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 // ══════════════════════════════════════════════════════════════════
-// ÖDEME MODAL
+// KONUM SEÇİCİ (USTA) — Haritadan tıklayarak konum seç
 // ══════════════════════════════════════════════════════════════════
-function PaymentModal({ appt, onClose, onSuccess }: {
-  appt: Appointment; onClose: () => void;
-  onSuccess: (info: NonNullable<Appointment["payment"]>) => void;
+function LocationPickerModal({ initial, onClose, onSave }: {
+  initial: { lat: number; lng: number };
+  onClose: () => void;
+  onSave: (loc: { lat: number; lng: number }) => void;
 }) {
-  type Step = "summary" | "card" | "processing" | "done";
-  const [step, setStep] = useState<Step>("summary");
-  const [num, setNum] = useState(""); const [holder, setHolder] = useState("");
-  const [exp, setExp] = useState(""); const [cvv, setCvv] = useState("");
-  const [showCvv, setShowCvv] = useState(false); const [inst, setInst] = useState(1);
-  const [errors, setErrors] = useState<Record<string, string>>({});
-  const INSTS = [{ n: 1, l: "Tek Çekim", e: 0 }, { n: 3, l: "3 Taksit", e: .03 }, { n: 6, l: "6 Taksit", e: .06 }, { n: 12, l: "12 Taksit", e: .12 }];
-  const extra = INSTS.find(o => o.n === inst)!.e;
-  const total = Math.round(appt.total * (1 + extra));
+  const ref = useRef<HTMLDivElement>(null);
+  const inst = useRef<unknown>(null);
+  const markerRef = useRef<unknown>(null);
+  const [loc, setLoc] = useState(initial);
 
-  const validate = () => {
-    const e: Record<string, string> = {};
-    if (num.replace(/\s/g, "").length < 16) e.num = "Geçerli kart numarası girin";
-    if (!holder.trim()) e.holder = "Ad soyad zorunlu";
-    if (exp.length < 5) e.exp = "Son kullanma tarihi geçersiz";
-    if (cvv.length < 3) e.cvv = "CVV geçersiz";
-    setErrors(e); return Object.keys(e).length === 0;
+  useEffect(() => {
+    const L = (window as unknown as Record<string, unknown>).L as Record<string, unknown>;
+    if (!L || !ref.current || inst.current) return;
+    const map = (L.map as (el: HTMLElement, opts: unknown) => { on: (ev: string, fn: (e: { latlng: { lat: number; lng: number } }) => void) => void; setView: (c: number[], z: number) => unknown; }
+    )(ref.current, { center: [initial.lat, initial.lng], zoom: 14 });
+    (L.tileLayer as (url: string, opts: unknown) => { addTo: (m: unknown) => void })("https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png", { attribution: "© OSM © CARTO", maxZoom: 19 }).addTo(map);
+    const icon = (L.divIcon as (opts: unknown) => unknown)({ html: `<div style="width:34px;height:34px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);background:linear-gradient(135deg,#ef4444,#dc2626);border:3px solid #fff;box-shadow:0 4px 14px rgba(0,0,0,.4)"></div>`, className: "", iconSize: [34, 34], iconAnchor: [17, 30] });
+    const marker = (L.marker as (latlng: unknown[], opts: unknown) => { addTo: (m: unknown) => unknown; setLatLng: (ll: number[]) => void })([initial.lat, initial.lng], { icon, draggable: true });
+    (marker.addTo(map) as unknown as { on: (ev: string, fn: (e: { target: { getLatLng: () => { lat: number; lng: number } } }) => void) => void }).on("dragend", (e) => {
+      const p = e.target.getLatLng(); setLoc({ lat: p.lat, lng: p.lng });
+    });
+    markerRef.current = marker;
+    map.on("click", (e) => {
+      (marker as { setLatLng: (ll: number[]) => void }).setLatLng([e.latlng.lat, e.latlng.lng]);
+      setLoc({ lat: e.latlng.lat, lng: e.latlng.lng });
+    });
+    inst.current = map;
+    return () => { (map as unknown as { remove: () => void }).remove(); inst.current = null; };
+  }, []);
+
+  const useGPS = () => {
+    if (!navigator.geolocation) return;
+    navigator.geolocation.getCurrentPosition(
+      p => {
+        const next = { lat: p.coords.latitude, lng: p.coords.longitude };
+        setLoc(next);
+        const map = inst.current as { setView: (c: number[], z: number) => void } | null;
+        const mk = markerRef.current as { setLatLng: (ll: number[]) => void } | null;
+        if (map) map.setView([next.lat, next.lng], 16);
+        if (mk) mk.setLatLng([next.lat, next.lng]);
+      },
+      () => {}
+    );
   };
-
-  const pay = () => {
-    if (!validate()) return;
-    setStep("processing");
-    setTimeout(() => {
-      onSuccess({ transactionId: "TXN" + uid().toUpperCase(), cardLast4: num.replace(/\s/g, "").slice(-4), installments: inst, amount: total, paidAt: new Date() });
-      setStep("done");
-    }, 2500);
-  };
-
-  const fmtNum = (v: string) => v.replace(/\D/g, "").slice(0, 16).replace(/(.{4})/g, "$1 ").trim();
-  const fmtExp = (v: string) => { const d = v.replace(/\D/g, "").slice(0, 4); return d.length > 2 ? d.slice(0, 2) + "/" + d.slice(2) : d; };
 
   return (
-    <div className="overlay" onClick={step === "done" ? onClose : undefined}>
-      <div className="modal" style={{ maxWidth: 520, position: "relative" }} onClick={e => e.stopPropagation()}>
-        {step === "processing" && (
-          <div style={{ position: "absolute", inset: 0, background: "rgba(13,22,41,.95)", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: "1rem", borderRadius: "var(--r24)", zIndex: 10 }}>
-            <div className="spinner" />
-            <div style={{ fontWeight: 700 }}>Ödeme İşleniyor...</div>
-            <div style={{ fontSize: ".875rem", color: "var(--t2)" }}>3D Secure doğrulanıyor</div>
+    <div className="overlay" onClick={onClose}>
+      <div className="modal modal-lg" onClick={e => e.stopPropagation()} style={{ maxWidth: 720 }}>
+        <div className="modal-head">
+          <h3><MapPin size={16} style={{ marginRight: ".375rem", verticalAlign: "middle" }}/>Konumunu Haritadan Seç</h3>
+          <button className="close-btn" onClick={onClose}><X size={14}/></button>
+        </div>
+        <div className="modal-body" style={{ padding: "1rem" }}>
+          <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".75rem" }}>
+            Haritaya tıklayarak veya marker'ı sürükleyerek iş yerinizin tam konumunu belirleyin.
           </div>
-        )}
-
-        {(step === "summary" || step === "card") && (<>
-          <div className="modal-head">
-            <div style={{ display: "flex", alignItems: "center", gap: ".625rem" }}>
-              {step === "card" && <button className="close-btn" onClick={() => setStep("summary")} style={{ width: 28, height: 28 }}><ArrowLeft size={14}/></button>}
-              <h3><CreditCard size={16} style={{ marginRight: ".375rem", verticalAlign: "middle" }}/>{step === "summary" ? "Ödeme Özeti" : "Kart Bilgileri"}</h3>
+          <div className="map-wrap" style={{ marginBottom: ".875rem" }}>
+            <div ref={ref} className="map-picker" />
+          </div>
+          <div style={{ display: "flex", gap: ".5rem", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap" }}>
+            <div style={{ fontSize: ".8125rem", color: "var(--t2)", fontFamily: "'JetBrains Mono',monospace" }}>
+              {loc.lat.toFixed(5)}, {loc.lng.toFixed(5)}
             </div>
-            <button className="close-btn" onClick={onClose}><X size={14}/></button>
+            <button className="btn btn-ghost btn-sm" onClick={useGPS}><Navigation size={13}/>GPS Konumumu Al</button>
           </div>
-          <div className="modal-body">
-            {step === "summary" && (<>
-              <div className="card" style={{ marginBottom: "1rem" }}>
-                <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: ".875rem" }}>
-                  <div><div style={{ fontWeight: 700 }}>{appt.masterName}</div><div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{appt.timeSlot} · {appt.date}</div></div>
-                  <div className="avatar av-md">{appt.masterName.split(" ").map(n => n[0]).join("").slice(0, 2)}</div>
-                </div>
-                {appt.services.map(s => (
-                  <div key={s.id} style={{ display: "flex", justifyContent: "space-between", padding: ".4375rem 0", borderBottom: "1px solid var(--gb)", fontSize: ".875rem" }}>
-                    <span style={{ color: "var(--t2)" }}>{s.name}</span><strong>{fmtTL(s.price)}</strong>
-                  </div>
-                ))}
-                <div style={{ display: "flex", justifyContent: "space-between", padding: ".75rem 0 0", fontWeight: 700 }}>
-                  <span>Toplam</span><span className="g-text" style={{ fontSize: "1.25rem", fontWeight: 800 }}>{fmtTL(appt.total)}</span>
-                </div>
-              </div>
-              <div className="alert a-info" style={{ marginBottom: "1rem" }}>
-                <Shield size={14}/><span><strong>Emanet Güvencesi:</strong> Paranız usta işi tamamlayana kadar güvenli hesabımızda tutulur.</span>
-              </div>
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: ".5rem" }}>
-                {[{ i: <Lock size={12}/>, l: "SSL 256-bit" }, { i: <Shield size={12}/>, l: "3D Secure" }, { i: <BadgeCheck size={12}/>, l: "PCI DSS" }, { i: <Zap size={12}/>, l: "Anlık Bildirim" }].map(b => (
-                  <div key={b.l} style={{ display: "flex", alignItems: "center", gap: ".4rem", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r8)", padding: ".5rem .75rem", fontSize: ".75rem", color: "var(--ok)", fontWeight: 600 }}>{b.i}{b.l}</div>
-                ))}
-              </div>
-            </>)}
-
-            {step === "card" && (<>
-              <div className="card-preview">
-                <div className="card-chip"/>
-                <div className="card-num">{num || "•••• •••• •••• ••••"}</div>
-                <div className="card-row">
-                  <div><div className="card-micro">Kart Sahibi</div><div className="card-val">{holder || "AD SOYAD"}</div></div>
-                  <div><div className="card-micro" style={{ textAlign: "right" }}>Son Kullanım</div><div className="card-val">{exp || "MM/YY"}</div></div>
-                </div>
-              </div>
-              <div className="fg">
-                <label className="fl">Kart Numarası</label>
-                <input className="fi" placeholder="0000 0000 0000 0000" value={num} onChange={e => setNum(fmtNum(e.target.value))} maxLength={19} style={{ fontFamily: "JetBrains Mono, monospace", letterSpacing: ".1em" }}/>
-                {errors.num && <div style={{ fontSize: ".75rem", color: "var(--err)", marginTop: ".25rem" }}>{errors.num}</div>}
-              </div>
-              <div className="fg">
-                <label className="fl">Kart Üzerindeki İsim</label>
-                <input className="fi" placeholder="AD SOYAD" value={holder} onChange={e => setHolder(e.target.value.toUpperCase())}/>
-                {errors.holder && <div style={{ fontSize: ".75rem", color: "var(--err)", marginTop: ".25rem" }}>{errors.holder}</div>}
-              </div>
-              <div className="fr2">
-                <div className="fg">
-                  <label className="fl">Son Kullanma</label>
-                  <input className="fi" placeholder="MM/YY" value={exp} onChange={e => setExp(fmtExp(e.target.value))} maxLength={5} style={{ fontFamily: "JetBrains Mono, monospace" }}/>
-                  {errors.exp && <div style={{ fontSize: ".75rem", color: "var(--err)", marginTop: ".25rem" }}>{errors.exp}</div>}
-                </div>
-                <div className="fg">
-                  <label className="fl">CVV</label>
-                  <div className="pw-wrap">
-                    <input className="fi" type={showCvv ? "text" : "password"} placeholder="•••" value={cvv} onChange={e => setCvv(e.target.value.slice(0, 4))} style={{ fontFamily: "JetBrains Mono, monospace" }}/>
-                    <button className="pw-btn" onClick={() => setShowCvv(!showCvv)}>{showCvv ? <EyeOff size={15}/> : <Eye size={15}/>}</button>
-                  </div>
-                  {errors.cvv && <div style={{ fontSize: ".75rem", color: "var(--err)", marginTop: ".25rem" }}>{errors.cvv}</div>}
-                </div>
-              </div>
-              <div className="fg">
-                <label className="fl">Taksit Seçeneği</label>
-                <div className="inst-grid">
-                  {INSTS.map(o => {
-                    const t = Math.round(appt.total * (1 + o.e));
-                    return (
-                      <div key={o.n} className={`inst-opt ${inst === o.n ? "sel" : ""}`} onClick={() => setInst(o.n)}>
-                        <div className="inst-opt-label">{o.l}</div>
-                        <div className="inst-opt-detail">{o.n === 1 ? fmtTL(t) : `${fmtTL(Math.round(t/o.n))}/ay`}</div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-              <div style={{ background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".875rem", fontSize: ".875rem" }}>
-                {extra > 0 && <div style={{ display: "flex", justifyContent: "space-between", color: "var(--t2)", marginBottom: ".375rem" }}><span>Taksit farkı ({(extra*100).toFixed(0)}%)</span><span>{fmtTL(Math.round(appt.total * extra))}</span></div>}
-                <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 700 }}><span>Ödenecek</span><span style={{ color: "#60a5fa" }}>{fmtTL(total)}</span></div>
-              </div>
-            </>)}
-          </div>
-          <div className="modal-foot">
-            {step === "summary" && <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} onClick={() => setStep("card")}><CreditCard size={15}/>Kart Bilgilerini Gir</button>}
-            {step === "card" && <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} onClick={pay}><Lock size={15}/>Güvenli Öde — {fmtTL(total)}</button>}
-          </div>
-        </>)}
-
-        {step === "done" && (<>
-          <div className="modal-head"><div/><button className="close-btn" onClick={onClose}><X size={14}/></button></div>
-          <div className="modal-body" style={{ textAlign: "center" }}>
-            <div className="success-circle"><Check size={26} style={{ color: "var(--ok)" }}/></div>
-            <h3 style={{ fontSize: "1.25rem", marginBottom: ".5rem" }}>Ödeme Başarılı!</h3>
-            <p style={{ color: "var(--t2)", fontSize: ".9rem", marginBottom: "1.5rem" }}>Paranız emniyette. Usta işi tamamlayınca otomatik aktarılacak.</p>
-            <div style={{ background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: "1rem", textAlign: "left" }}>
-              {[["Usta", appt.masterName], ["Tarih", appt.date + " · " + appt.timeSlot], ["Taksit", inst === 1 ? "Tek çekim" : `${inst} taksit`], ["Toplam", fmtTL(total)]].map(([k, v]) => (
-                <div key={k} style={{ display: "flex", justifyContent: "space-between", fontSize: ".875rem", padding: ".3125rem 0", borderBottom: "1px solid var(--gb)" }}>
-                  <span style={{ color: "var(--t2)" }}>{k}</span><strong>{v}</strong>
-                </div>
-              ))}
-            </div>
-          </div>
-          <div className="modal-foot"><button className="btn btn-primary" style={{ width: "100%" }} onClick={onClose}><Check size={14}/>Tamam</button></div>
-        </>)}
+        </div>
+        <div className="modal-foot">
+          <button className="btn btn-ghost" onClick={onClose}>İptal</button>
+          <button className="btn btn-primary" onClick={() => onSave(loc)}><Save size={13}/>Bu Konumu Kaydet</button>
+        </div>
       </div>
     </div>
   );
@@ -964,30 +968,96 @@ function CarHero() {
 // AUTH EKRANI
 // ══════════════════════════════════════════════════════════════════
 function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void }) {
-  type V = "login" | "register" | "forgot";
+  type V = "login" | "register" | "verify" | "forgot";
   const [view, setView] = useState<V>("login");
   const [lId, setLId] = useState(""); const [lPw, setLPw] = useState(""); const [showPw, setShowPw] = useState(false); const [lErr, setLErr] = useState("");
   const [rN, setRN] = useState(""); const [rE, setRE] = useState(""); const [rPh, setRPh] = useState(""); const [rPw, setRPw] = useState(""); const [rPw2, setRPw2] = useState(""); const [rSec, setRSec] = useState(""); const [rRole, setRRole] = useState<"customer" | "master">("customer"); const [rErr, setRErr] = useState("");
   const [fId, setFId] = useState(""); const [fAns, setFAns] = useState(""); const [fNPw, setFNPw] = useState(""); const [fStep, setFStep] = useState<"find"|"ans"|"newpw"|"done">("find"); const [fUser, setFUser] = useState<AppUser | null>(null); const [fErr, setFErr] = useState("");
+  const [vCode, setVCode] = useState(""); const [vEntered, setVEntered] = useState(""); const [vErr, setVErr] = useState(""); const [vCooldown, setVCooldown] = useState(0); const [vSending, setVSending] = useState(false); const [vSentAt, setVSentAt] = useState<Date | null>(null); const [vDemoMode, setVDemoMode] = useState(false);
+
+  // Geri sayım (kod tekrar gönder)
+  useEffect(() => {
+    if (vCooldown <= 0) return;
+    const t = setInterval(() => setVCooldown(c => Math.max(0, c - 1)), 1000);
+    return () => clearInterval(t);
+  }, [vCooldown]);
+
+  const normEmail = (s: string) => s.trim().toLowerCase();
+  const normPhone = (s: string) => s.replace(/[^\d]/g, "");
 
   const doLogin = () => {
-    const u = users.find(u => (u.email === lId || u.phone === lId) && u.password === lPw);
+    const id = lId.trim();
+    const idL = id.toLowerCase();
+    const phoneDigits = normPhone(id);
+    const u = users.find(u => (normEmail(u.email) === idL || normPhone(u.phone) === phoneDigits) && u.password === lPw);
     if (!u) { setLErr("E-posta/telefon veya şifre hatalı."); return; }
     setLErr(""); onLogin(u);
   };
-  const doRegister = () => {
-    if (!rN || !rE || !rPh || !rPw || !rSec) { setRErr("Tüm alanları doldurun."); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(rE)) { setRErr("Geçerli bir e-posta adresi girin. (örn: isim@gmail.com)"); return; }
-    if (!/^(05\d{9}|5\d{9})$/.test(rPh.replace(/\s/g, ""))) { setRErr("Geçerli bir telefon numarası girin. (örn: 05xx xxx xx xx)"); return; }
+
+  const sendVerificationCode = async (email: string, code: string): Promise<{ ok: boolean; error?: string }> => {
+    // EmailJS varsa mail gönder, yoksa demo modu (konsol + UI'da kod gösterilir).
+    const w = window as unknown as { emailjs?: { send: (svc: string, tpl: string, p: Record<string, string>, key: string) => Promise<unknown> }; EMAILJS_CONFIG?: { serviceId: string; templateId: string; publicKey: string } };
+    const cfg = w.EMAILJS_CONFIG;
+    if (!w.emailjs || !cfg?.serviceId || !cfg?.templateId || !cfg?.publicKey) {
+      console.info("[Demo] EMAILJS_CONFIG yapılandırılmamış. Kod ekranda gösteriliyor:", code);
+      return { ok: false };
+    }
+    try {
+      await w.emailjs.send(cfg.serviceId, cfg.templateId, {
+        to_email: email,
+        code,
+        app_name: "OtoTamirciOnline",
+        from_name: "OtoTamirciOnline",
+      }, cfg.publicKey);
+      return { ok: true };
+    } catch (err: unknown) {
+      const msg = (err as { text?: string; message?: string })?.text || (err as Error)?.message || "Mail gönderilemedi";
+      console.warn("EmailJS gönderimi başarısız:", err);
+      return { ok: false, error: msg };
+    }
+  };
+
+  const doStartRegister = async () => {
+    const e = normEmail(rE);
+    const p = normPhone(rPh);
+    if (!rN || !e || !p || !rPw || !rSec) { setRErr("Tüm alanları doldurun."); return; }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(e)) { setRErr("Geçerli bir e-posta adresi girin. (örn: isim@gmail.com)"); return; }
+    if (!/^(05\d{9}|5\d{9})$/.test(p)) { setRErr("Geçerli bir telefon numarası girin. (örn: 05xx xxx xx xx)"); return; }
     if (rPw !== rPw2) { setRErr("Şifreler eşleşmiyor."); return; }
     if (rPw.length < 6) { setRErr("Şifre en az 6 karakter olmalı."); return; }
-    if (users.find(u => u.email === rE.trim().toLowerCase())) { setRErr("Bu e-posta zaten kayıtlı."); return; }
-    const nu: AppUser = { id: "u_" + uid(), name: rN.trim(), email: rE.trim(), phone: rPh.trim(), password: rPw, securityAnswer: rSec.trim().toLowerCase(), role: rRole, createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
+    if (users.find(u => normEmail(u.email) === e)) { setRErr("Bu e-posta zaten kayıtlı."); return; }
+    if (users.find(u => normPhone(u.phone) === p)) { setRErr("Bu telefon numarası zaten kayıtlı."); return; }
+    setRErr(""); setVSending(true);
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setVCode(code); setVEntered(""); setVErr("");
+    const res = await sendVerificationCode(e, code);
+    setVSending(false); setVCooldown(60); setVSentAt(new Date()); setVDemoMode(!res.ok && !res.error);
+    setView("verify");
+    if (res.error) setVErr(`Mail gönderilemedi: ${res.error}. Lütfen tekrar deneyin.`);
+  };
+
+  const doResendCode = async () => {
+    if (vCooldown > 0 || vSending) return;
+    setVSending(true); setVErr("");
+    const code = Math.floor(100000 + Math.random() * 900000).toString();
+    setVCode(code); setVEntered("");
+    const res = await sendVerificationCode(normEmail(rE), code);
+    setVSending(false); setVCooldown(60); setVSentAt(new Date()); setVDemoMode(!res.ok && !res.error);
+    if (res.error) setVErr(`Mail gönderilemedi: ${res.error}.`);
+  };
+
+  const doVerifyAndRegister = () => {
+    if (vEntered.trim() !== vCode) { setVErr("Doğrulama kodu hatalı."); return; }
+    const nu: AppUser = {
+      id: "u_" + uid(), name: rN.trim(), email: normEmail(rE), phone: normPhone(rPh),
+      password: rPw, securityAnswer: rSec.trim().toLowerCase(), role: rRole,
+      createdAt: new Date(), totalSpent: 0, appointmentCount: 0,
+    };
     supabase?.insert("app_users", userToDB(nu)).catch(console.error);
     setUsers(prev => { const n = [...prev, nu]; saveLS(LS.users, n); return n; });
     onLogin(nu);
   };
-  const doForgotFind = () => { const u = users.find(u => u.email === fId || u.phone === fId); if (!u) { setFErr("Hesap bulunamadı."); return; } setFUser(u); setFErr(""); setFStep("ans"); };
+  const doForgotFind = () => { const id = fId.trim(); const idL = id.toLowerCase(); const ph = normPhone(id); const u = users.find(u => normEmail(u.email) === idL || normPhone(u.phone) === ph); if (!u) { setFErr("Hesap bulunamadı."); return; } setFUser(u); setFErr(""); setFStep("ans"); };
   const doForgotAns = () => { if (!fUser || fAns.trim().toLowerCase() !== fUser.securityAnswer) { setFErr("Cevap hatalı."); return; } setFErr(""); setFStep("newpw"); };
   const doForgotPw = () => {
     if (fNPw.length < 6) { setFErr("En az 6 karakter."); return; }
@@ -1017,7 +1087,7 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
           <div className="deco-domain">ototamircimonline.com</div>
           <CarHero/>
           <h2 className="deco-h">Yakın ve Tanıdık<br/>Usta Bulma Platformu</h2>
-          <p className="deco-p">Ankara'nın onaylı, referanslı ustalarını tek platformda bulun. Şeffaf fiyat, kolay ödeme.</p>
+          <p className="deco-p">Ankara'nın onaylı, referanslı ustalarını tek platformda bulun. Şeffaf fiyat, kolay randevu.</p>
           {["Onaylı ve referanslı ustalar", "Oto tamir, bakım ve yıkama", "Şeffaf fiyatlandırma", "Randevulu hizmet"].map(f => (
             <div key={f} className="deco-feat"><div className="deco-dot"/>{f}</div>
           ))}
@@ -1069,7 +1139,59 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
             </div>
             {rRole === "master" && <div className="alert a-info" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>Usta hesabı admin onayına tabidir.</div>}
             {rErr && <div className="alert a-err" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>{rErr}</div>}
-            <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} onClick={doRegister}><UserPlus size={14}/>Hesap Oluştur</button>
+            <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={vSending} onClick={doStartRegister}>
+              <Mail size={14}/>{vSending ? "Kod gönderiliyor..." : "Doğrulama Kodu Gönder"}
+            </button>
+          </>)}
+
+          {/* E-POSTA DOĞRULAMA */}
+          {view === "verify" && (<>
+            <div style={{ display: "flex", alignItems: "center", gap: ".625rem", marginBottom: "1.25rem" }}>
+              <button className="close-btn" onClick={() => setView("register")}><ArrowLeft size={14}/></button>
+              <h3 style={{ fontWeight: 700 }}>E-posta Doğrulama</h3>
+            </div>
+            {vSending ? (
+              <div style={{ textAlign: "center", padding: "1.5rem 1rem", marginBottom: "1rem" }}>
+                <div className="spinner" style={{ margin: "0 auto 1rem" }}/>
+                <div style={{ fontWeight: 700, marginBottom: ".25rem" }}>Mail gönderiliyor...</div>
+                <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}><strong>{normEmail(rE)}</strong> adresine doğrulama kodu atılıyor</div>
+              </div>
+            ) : vDemoMode ? (
+              <div style={{ background: "rgba(245,158,11,.08)", border: "1px dashed rgba(245,158,11,.4)", borderRadius: "var(--r12)", padding: ".75rem 1rem", fontSize: ".8125rem", color: "#fbbf24", marginBottom: "1rem", lineHeight: 1.55 }}>
+                <strong>Demo modu:</strong> EmailJS yapılandırılmadı, gerçek mail gitmedi. Üretim için <code style={{ background: "rgba(0,0,0,.25)", padding: "1px 5px", borderRadius: 4 }}>src/main.tsx</code> içindeki EMAILJS_* değerlerini doldurun. <br/>
+                Ekrandaki kod: <strong style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1rem", letterSpacing: ".15em", color: "#fde68a" }}>{vCode}</strong>
+              </div>
+            ) : (
+              <div className="alert a-ok" style={{ marginBottom: "1rem" }}>
+                <Mail size={13}/>
+                <span>
+                  <strong>{normEmail(rE)}</strong> adresine 6 haneli doğrulama kodu gönderildi.
+                  {vSentAt && <span style={{ display: "block", fontSize: ".75rem", color: "var(--t3)", marginTop: ".125rem" }}>Gönderim: {vSentAt.toLocaleTimeString("tr-TR")} · Mail gelmediyse spam klasörünü kontrol edin.</span>}
+                </span>
+              </div>
+            )}
+            <div className="fg">
+              <label className="fl">6 Haneli Kod</label>
+              <input
+                className="fi"
+                placeholder="••••••"
+                value={vEntered}
+                onChange={e => setVEntered(e.target.value.replace(/\D/g, "").slice(0, 6))}
+                maxLength={6}
+                inputMode="numeric"
+                autoFocus
+                disabled={vSending}
+                style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.125rem", letterSpacing: ".35em", textAlign: "center" }}
+                onKeyDown={e => e.key === "Enter" && doVerifyAndRegister()}
+              />
+            </div>
+            {vErr && <div className="alert a-err" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>{vErr}</div>}
+            <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem", marginBottom: ".5rem" }} onClick={doVerifyAndRegister} disabled={vEntered.length !== 6 || vSending}>
+              <Check size={14}/>Doğrula & Hesabı Oluştur
+            </button>
+            <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={doResendCode} disabled={vCooldown > 0 || vSending}>
+              {vSending ? "Gönderiliyor..." : vCooldown > 0 ? `Yeniden gönder (${vCooldown}sn)` : "Kodu Yeniden Gönder"}
+            </button>
           </>)}
 
           {/* ŞİFRE UNUTTUM */}
@@ -1100,7 +1222,6 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
 }) {
   const [selected, setSelected] = useState<Service[]>([]);
   const [slot, setSlot] = useState(""); const [date, setDate] = useState(""); const [notes, setNotes] = useState("");
-  const [payModal, setPayModal] = useState(false);
   const existing = appointments.find(a => a.masterId === master.id && a.customerId === user.id && ["pending", "approved"].includes(a.status));
   const total = selected.reduce((s, v) => s + v.price, 0);
   const toggle = (s: Service) => setSelected(prev => prev.find(x => x.id === s.id) ? prev.filter(x => x.id !== s.id) : [...prev, s]);
@@ -1117,15 +1238,6 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
     setAppointments(prev => { const n = [...prev, appt]; saveLS(LS.appointments, n); return n; });
     setUsers(prev => { const n = prev.map(u => u.id === user.id ? { ...u, appointmentCount: u.appointmentCount + 1 } : u); saveLS(LS.users, n); return n; });
     toast(autoApprove ? "Randevu otomatik onaylandı!" : "Randevu talebi usta onayına gönderildi!", "ok"); onClose();
-  };
-
-  const handlePaySuccess = (info: NonNullable<Appointment["payment"]>) => {
-    if (!existing) return;
-    supabase?.update("appointments", existing.id, { status: "paid", payment: info }).catch(console.error);
-    supabase?.update("app_users", user.id, { total_spent: user.totalSpent + info.amount }).catch(console.error);
-    setAppointments(prev => { const n = prev.map(a => a.id === existing.id ? { ...a, status: "paid" as AppointmentStatus, payment: info } : a); saveLS(LS.appointments, n); return n; });
-    setUsers(prev => { const n = prev.map(u => u.id === user.id ? { ...u, totalSpent: u.totalSpent + info.amount } : u); saveLS(LS.users, n); return n; });
-    toast("Ödeme alındı! Paranız emanette.", "ok");
   };
 
   return (
@@ -1165,6 +1277,44 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: "column" as const }}>
           <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem" }}>
+            {/* Haftalık müsaitlik grid */}
+            {(master.availability?.days?.length || master.availability?.slots?.length) ? (() => {
+              const todayIdx = dayIdxFromJS(new Date().getDay());
+              const nowSlot = currentSlot();
+              return (
+                <div className="card" style={{ marginBottom: "1rem", padding: "1rem" }}>
+                  <div className="card-title" style={{ marginBottom: ".75rem" }}>
+                    <Clock size={14}/>Haftalık Müsaitlik
+                    {isMasterLiveNow(master) && <span className="live-badge" style={{ marginLeft: "auto" }}><span className="live-dot"/>Şimdi Müsait</span>}
+                  </div>
+                  <div className="week-grid">
+                    <div/>
+                    {DAYS.map((d, i) => (
+                      <div key={d} className="week-head" style={{ color: i === todayIdx ? "#60a5fa" : "var(--t2)" }}>
+                        {d.slice(0, 3)}
+                      </div>
+                    ))}
+                    {TIME_SLOTS.map(slot => (
+                      <React.Fragment key={slot}>
+                        <div className="week-time">{slot.split("-")[0]}</div>
+                        {DAYS.map((d, i) => {
+                          const dayOK = master.availability?.days?.length ? master.availability.days.includes(d) : true;
+                          const slotOK = master.availability?.slots?.length ? master.availability.slots.includes(slot) : false;
+                          const on = dayOK && slotOK;
+                          const isNow = i === todayIdx && slot === nowSlot;
+                          return <div key={d} className={`week-cell ${on ? "on" : "off"} ${isNow ? "today" : ""}`}/>;
+                        })}
+                      </React.Fragment>
+                    ))}
+                  </div>
+                  <div style={{ display: "flex", gap: ".75rem", marginTop: ".625rem", fontSize: ".6875rem", color: "var(--t3)", flexWrap: "wrap" }}>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: ".3rem" }}><span style={{ width: 10, height: 10, background: "rgba(16,185,129,.35)", borderRadius: 2, border: "1px solid rgba(16,185,129,.5)" }}/>Müsait</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: ".3rem" }}><span style={{ width: 10, height: 10, background: "var(--g)", borderRadius: 2, border: "1px solid var(--gb)" }}/>Kapalı</span>
+                    <span style={{ display: "inline-flex", alignItems: "center", gap: ".3rem" }}><span style={{ width: 10, height: 10, borderRadius: 2, boxShadow: "inset 0 0 0 1px rgba(37,99,235,.5)" }}/>Şimdi</span>
+                  </div>
+                </div>
+              );
+            })() : null}
             <div className="card-title"><Package size={14}/>Hizmetler & İşçilik Ücretleri</div>
             {master.services.length === 0 ? (
               <div className="empty-state"><Package size={32}/><h3>Henüz hizmet yok</h3><p>Bu usta henüz hizmet eklememiş.</p></div>
@@ -1210,21 +1360,21 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
                 {TIME_SLOTS.map(s => <button key={s} className={`btn ${slot === s ? "btn-primary" : "btn-ghost"}`} style={{ justifyContent: "center", fontSize: ".8125rem" }} onClick={() => setSlot(s)}>{s}</button>)}
               </div>
               <div className="fg"><label className="fl">Not (opsiyonel)</label><textarea className="fi" rows={2} style={{ resize: "none" }} placeholder="Araç veya sorun hakkında not..." value={notes} onChange={e => setNotes(e.target.value)}/></div>
-              <div className="alert a-info"><Lock size={13}/>Usta onaylamadan ödeme butonu aktif olmaz.</div>
+              <div className="alert a-info"><AlertCircle size={13}/>Ödeme, iş tamamlandığında yüz yüze yapılır. Platform üzerinden ödeme alınmaz.</div>
             </>)}
 
             {existing && (<>
               <div className="divider"/>
               <div className="card-title">Mevcut Randevu</div>
               <div className="card card-sm">
-                {[["Saat", existing.timeSlot], ["Tarih", existing.date], ["Tutar", fmtTL(existing.total)]].map(([k, v]) => (
+                {[["Saat", existing.timeSlot], ["Tarih", existing.date], ["Tahmini Tutar", fmtTL(existing.total)]].map(([k, v]) => (
                   <div key={k} style={{ display: "flex", justifyContent: "space-between", marginBottom: ".5rem", fontSize: ".875rem" }}>
                     <span style={{ color: "var(--t2)" }}>{k}</span><strong>{v}</strong>
                   </div>
                 ))}
                 <div style={{ display: "flex", justifyContent: "space-between", fontSize: ".875rem" }}>
                   <span style={{ color: "var(--t2)" }}>Durum</span>
-                  <span className={`status s-${existing.status}`}>{existing.status === "pending" ? <><Clock size={11}/>Onay Bekleniyor</> : <><CheckCircle size={11}/>Onaylandı — Ödeme Yapabilirsiniz</>}</span>
+                  <span className={`status s-${existing.status}`}>{existing.status === "pending" ? <><Clock size={11}/>Onay Bekleniyor</> : <><CheckCircle size={11}/>Randevu Onaylandı</>}</span>
                 </div>
               </div>
             </>)}
@@ -1239,11 +1389,14 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
               </div>
             )}
             {!existing && <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={!selected.length || !slot} onClick={submit}><Clock size={14}/>Randevu Talebi Gönder</button>}
-            {existing && <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={existing.status !== "approved"} onClick={() => setPayModal(true)}><CreditCard size={14}/>{existing.status === "approved" ? "Güvenli Ödeme Yap" : "Usta Onayı Bekleniyor..."}</button>}
+            {existing && (
+              <div style={{ display: "flex", alignItems: "center", gap: ".625rem", padding: ".75rem 1rem", background: existing.status === "approved" ? "rgba(16,185,129,.1)" : "rgba(245,158,11,.1)", border: `1px solid ${existing.status === "approved" ? "rgba(16,185,129,.3)" : "rgba(245,158,11,.3)"}`, borderRadius: "var(--r12)", fontSize: ".875rem", fontWeight: 600, color: existing.status === "approved" ? "var(--ok)" : "var(--warn)" }}>
+                {existing.status === "approved" ? <><CheckCircle size={15}/>Randevunuz onaylandı! Belirlenen saatte ustanıza gidebilirsiniz.</> : <><Clock size={15}/>Usta randevunuzu değerlendiriyor...</>}
+              </div>
+            )}
           </div>
         </div>
       </div>
-      {payModal && existing && <PaymentModal appt={existing} onClose={() => { setPayModal(false); onClose(); }} onSuccess={handlePaySuccess}/>}
     </div>
   );
 }
@@ -1306,6 +1459,32 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   const [sel, setSel] = useState<Master | null>(null);
   const [userLoc, setUserLoc] = useState<{ lat: number; lng: number } | null>(null);
   const [locLoading, setLocLoading] = useState(false);
+  const [now, setNow] = useState<Date>(() => new Date());
+
+  useEffect(() => {
+    const id = setInterval(() => setNow(new Date()), 60 * 1000);
+    return () => clearInterval(id);
+  }, []);
+
+  const quickBook = (m: Master) => {
+    const today = new Date();
+    const free = getFreeSlotsForDate(m, today, appointments);
+    if (!free.length) { toast("Bu usta bugün müsait değil", "warn"); return; }
+    if (!m.services.length) { toast("Usta henüz hizmet eklememiş", "warn"); return; }
+    const firstSvc = m.services[0];
+    const slot = free[0];
+    const appt: Appointment = {
+      id: "appt_" + uid(), customerId: user.id, customerName: user.name, customerPhone: user.phone,
+      masterId: m.id, masterName: m.name, services: [firstSvc], total: firstSvc.price,
+      timeSlot: slot, date: today.toLocaleDateString("tr-TR"), status: "approved",
+      createdAt: new Date(), notes: "Hızlı randevu"
+    };
+    supabase?.insert("appointments", apptToDB(appt)).catch(console.error);
+    supabase?.update("app_users", user.id, { appointment_count: user.appointmentCount + 1 }).catch(console.error);
+    setAppointments(prev => { const n = [...prev, appt]; saveLS(LS.appointments, n); return n; });
+    setUsers(prev => { const n = prev.map(u => u.id === user.id ? { ...u, appointmentCount: u.appointmentCount + 1 } : u); saveLS(LS.users, n); return n; });
+    toast(`${m.name} — bugün ${slot} için randevunuz oluşturuldu!`, "ok");
+  };
 
   const approved = masters.filter(m => m.isApproved);
   const filtered = approved.filter(m => {
@@ -1316,7 +1495,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   });
   const withDist = filtered.map(m => ({ master: m, distKm: userLoc ? haversineKm(userLoc.lat, userLoc.lng, m.lat, m.lng) : undefined })).sort((a, b) => (a.distKm ?? 999) - (b.distKm ?? 999));
   const myAppts = appointments.filter(a => a.customerId === user.id);
-  const pendingPay = myAppts.filter(a => a.status === "approved").length;
+  const activeApptCount = myAppts.filter(a => a.status === "pending" || a.status === "approved").length;
 
   const getLoc = () => {
     if (!navigator.geolocation) {
@@ -1358,12 +1537,11 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
 
   const navItems = [
     { id: "find" as T, icon: <Search size={20}/>, label: "Usta Bul" },
-    { id: "appointments" as T, icon: <Clock size={20}/>, label: "Randevular", badge: pendingPay },
+    { id: "appointments" as T, icon: <Clock size={20}/>, label: "Randevular", badge: activeApptCount },
     { id: "reviews" as T, icon: <Star size={20}/>, label: "Görüşler", badge: pendingReview },
     { id: "profile" as T, icon: <User size={20}/>, label: "Profil" },
   ];
 
-  const statusLabel: Record<AppointmentStatus, string> = { pending: "Onay Bekleniyor", approved: "Ödeme Yapılabilir", rejected: "Reddedildi", paid: "Ödendi", completed: "Tamamlandı" };
 
   return (
     <div className="page">
@@ -1423,34 +1601,72 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                 <div className="empty-state"><Search size={32}/><h3>Usta bulunamadı</h3><p>Farklı filtreler deneyin</p></div>
               ) : (
                 <div className="masters-grid">
-                  {withDist.map(({ master: m, distKm }) => (
-                    <div key={m.id} className="master-card" onClick={() => setSel(m)}>
-                      {distKm != null && <div className="dist-badge"><Navigation size={10}/>{distKm.toFixed(1)} km</div>}
-                      <div style={{ display: "flex", gap: ".875rem", marginBottom: ".875rem" }}>
-                        <div className="avatar av-md">{m.avatar}</div>
-                        <div style={{ minWidth: 0 }}>
-                          <div style={{ fontWeight: 700, fontSize: ".9375rem" }} className="ellipsis">{m.name}</div>
-                          <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{m.specialty}</div>
-                          <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem" }}><MapPin size={10}/>{m.district}</div>
-                          <div style={{ marginTop: ".375rem" }}>
-                            <span className={`cat-badge cat-${m.category || "tamir"}`}>
-                              {(m.category || "tamir") === "tamir" ? <><Wrench size={10}/>Tamir & Bakım</> : <>💧 Yıkama</>}
-                            </span>
-                          </div>
+                  {withDist.map(({ master: m, distKm }) => {
+                    const live = isMasterLiveNow(m, now);
+                    const today = new Date(now);
+                    const tomorrow = new Date(now); tomorrow.setDate(tomorrow.getDate() + 1);
+                    const todayFree = getFreeSlotsForDate(m, today, appointments);
+                    const tomorrowFree = getFreeSlotsForDate(m, tomorrow, appointments);
+                    const todayConfigured = !m.availability?.days?.length || m.availability.days.includes(DAYS[dayIdxFromJS(today.getDay())]);
+                    const tomorrowConfigured = !m.availability?.days?.length || m.availability.days.includes(DAYS[dayIdxFromJS(tomorrow.getDay())]);
+                    const renderSlotRow = (label: string, free: string[], isDayConfigured: boolean) => (
+                      <div className="avail-row">
+                        <span className="avail-label">{label}</span>
+                        <div className="avail-slots">
+                          {!isDayConfigured ? (
+                            <span className="avail-empty">Kapalı</span>
+                          ) : m.availability?.slots?.length ? (
+                            m.availability.slots.map(s => (
+                              <span key={s} className={`avail-slot ${free.includes(s) ? "free" : "busy"}`}>{s}</span>
+                            ))
+                          ) : (
+                            <span className="avail-empty">Müsaitlik tanımlanmamış</span>
+                          )}
                         </div>
                       </div>
-                      <div style={{ display: "flex", gap: ".875rem", marginBottom: ".875rem", flexWrap: "wrap" }}>
-                        <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><span style={{ color: "#fbbf24" }}>⭐</span><strong>{m.rating || "Yeni"}</strong><span style={{ color: "var(--t2)" }}>puan</span></div>
-                        <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Award size={12} style={{ color: "var(--ind)" }}/><strong>{m.completedJobs}</strong><span style={{ color: "var(--t2)" }}>iş</span></div>
-                        <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Package size={12} style={{ color: "var(--t3)" }}/><strong>{m.services.length}</strong><span style={{ color: "var(--t2)" }}>hizmet</span></div>
+                    );
+                    return (
+                      <div key={m.id} className="master-card" onClick={() => setSel(m)}>
+                        {distKm != null && <div className="dist-badge"><Navigation size={10}/>{distKm.toFixed(1)} km</div>}
+                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem" }}>
+                          <div className="avatar av-md">{m.avatar}</div>
+                          <div style={{ minWidth: 0, flex: 1 }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: ".4rem", flexWrap: "wrap" }}>
+                              <div style={{ fontWeight: 700, fontSize: ".9375rem" }} className="ellipsis">{m.name}</div>
+                              {live && <span className="live-badge"><span className="live-dot"/>Şimdi Müsait</span>}
+                            </div>
+                            <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{m.specialty}</div>
+                            <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem" }}><MapPin size={10}/>{m.district}</div>
+                            <div style={{ marginTop: ".375rem" }}>
+                              <span className={`cat-badge cat-${m.category || "tamir"}`}>
+                                {(m.category || "tamir") === "tamir" ? <><Wrench size={10}/>Tamir & Bakım</> : <>💧 Yıkama</>}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
+                          <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><span style={{ color: "#fbbf24" }}>⭐</span><strong>{m.rating || "Yeni"}</strong></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Award size={12} style={{ color: "var(--ind)" }}/><strong>{m.completedJobs}</strong><span style={{ color: "var(--t2)" }}>iş</span></div>
+                          <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Package size={12} style={{ color: "var(--t3)" }}/><strong>{m.services.length}</strong><span style={{ color: "var(--t2)" }}>hizmet</span></div>
+                        </div>
+                        <div className="avail-block" onClick={e => e.stopPropagation()}>
+                          {renderSlotRow("Bugün", todayFree, todayConfigured)}
+                          {renderSlotRow("Yarın", tomorrowFree, tomorrowConfigured)}
+                        </div>
+                        <div style={{ display: "flex", gap: ".5rem", marginBottom: ".5rem" }}>
+                          <button className="btn btn-primary" style={{ flex: 1, fontSize: ".8125rem" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
+                          <button
+                            className="quick-book-btn"
+                            disabled={todayFree.length === 0 || !m.services.length}
+                            onClick={e => { e.stopPropagation(); quickBook(m); }}
+                            title={todayFree.length ? `Bugün ${todayFree[0]} için hızlı randevu` : "Bugün boş yok"}
+                          >
+                            <Clock size={11}/>Hızlı
+                          </button>
+                        </div>
                       </div>
-                      <div style={{ display: "flex", gap: ".375rem", flexWrap: "wrap", marginBottom: ".875rem" }}>
-                        {m.services.slice(0, 2).map(s => <span key={s.id} className="tag">{s.name}</span>)}
-                        {m.services.length > 2 && <span className="tag">+{m.services.length - 2}</span>}
-                      </div>
-                      <button className="btn btn-primary" style={{ width: "100%", fontSize: ".8125rem" }}>Hizmet Al →</button>
-                    </div>
-                  ))}
+                    );
+                  })}
                 </div>
               )
             ) : (<>
@@ -1467,9 +1683,8 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
             ) : myAppts.map(a => {
               const stepInfo: Record<AppointmentStatus, { label: string; color: string; hint: string }> = {
                 pending:   { label: "Onay Bekleniyor", color: "var(--warn)", hint: "Usta talebinizi inceliyor." },
-                approved:  { label: "Ödeme Yapılabilir", color: "var(--ok)", hint: "Usta onayladı. Ödeme yaparak randevuyu tamamlayın." },
+                approved:  { label: "Randevu Onaylandı", color: "var(--ok)", hint: "Ustanız belirlenen saatte sizi bekliyor. Ödeme iş tamamlandığında yapılır." },
                 rejected:  { label: "Reddedildi", color: "var(--err)", hint: "Usta bu talebi kabul etmedi." },
-                paid:      { label: "Ödeme Yapıldı ✓", color: "#60a5fa", hint: "Ödemeniz alındı. Ustanız işi tamamlayınca durum güncellenecek." },
                 completed: { label: "İş Tamamlandı ✓", color: "var(--ok)", hint: "Usta işi tamamladı. Değerlendirme yapabilirsiniz." },
               };
               const si = stepInfo[a.status];
@@ -1480,7 +1695,6 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                       <div style={{ fontWeight: 700, marginBottom: ".25rem" }}>{a.masterName}</div>
                       <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem" }}>{a.services.map(s => s.name).join(", ")}</div>
                       <div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.date} · {a.timeSlot}</div>
-                      {a.payment && <div style={{ fontSize: ".75rem", color: "var(--ok)", marginTop: ".375rem", display: "flex", alignItems: "center", gap: ".25rem", flexWrap: "wrap" }}><Receipt size={11}/>#{a.payment.transactionId} · *{a.payment.cardLast4} · {fmtTL(a.payment.amount)}</div>}
                     </div>
                     <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".5rem", flexShrink: 0 }}>
                       <span style={{ fontWeight: 800, color: "#60a5fa" }}>{fmtTL(a.total)}</span>
@@ -1489,8 +1703,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                   </div>
                   <div style={{ marginTop: ".625rem", padding: ".5rem .75rem", background: "var(--g)", borderRadius: "var(--r8)", fontSize: ".8125rem", color: "var(--t2)", display: "flex", alignItems: "center", gap: ".5rem" }}>
                     {a.status === "pending" && <Clock size={13} style={{ color: "var(--warn)", flexShrink: 0 }}/>}
-                    {a.status === "approved" && <CreditCard size={13} style={{ color: "var(--ok)", flexShrink: 0 }}/>}
-                    {a.status === "paid" && <Wrench size={13} style={{ color: "#60a5fa", flexShrink: 0 }}/>}
+                    {a.status === "approved" && <CheckCircle size={13} style={{ color: "var(--ok)", flexShrink: 0 }}/>}
                     {a.status === "completed" && <CheckCircle size={13} style={{ color: "var(--ok)", flexShrink: 0 }}/>}
                     {a.status === "rejected" && <XCircle size={13} style={{ color: "var(--err)", flexShrink: 0 }}/>}
                     {si.hint}
@@ -1538,7 +1751,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
             <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
               <div className="stat-card"><div className="stat-val" style={{ color: "#60a5fa" }}>{user.appointmentCount}</div><div className="stat-label">Randevu</div></div>
               <div className="stat-card"><div className="stat-val" style={{ color: "var(--ok)" }}>{myAppts.filter(a => a.status === "completed").length}</div><div className="stat-label">Tamamlanan</div></div>
-              <div className="stat-card"><div className="stat-val" style={{ color: "var(--ind)", fontSize: "1.25rem" }}>{fmtTL(user.totalSpent)}</div><div className="stat-label">Harcama</div></div>
+              <div className="stat-card"><div className="stat-val" style={{ color: "var(--warn)" }}>{myAppts.filter(a => a.status === "pending" || a.status === "approved").length}</div><div className="stat-label">Aktif</div></div>
             </div>
             <div className="card">
               <div className="card-title"><User size={14}/>Kişisel Bilgiler</div>
@@ -1584,6 +1797,7 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
   const [avSlots, setAvSlots] = useState<string[]>(myMaster?.availability?.slots ?? []);
   const [masterLat, setMasterLat] = useState(myMaster?.lat ?? ANKARA_CENTER.lat);
   const [masterLng, setMasterLng] = useState(myMaster?.lng ?? ANKARA_CENTER.lng);
+  const [showLocPicker, setShowLocPicker] = useState(false);
   const [showSvcForm, setShowSvcForm] = useState(false);
   const [sN, setSN] = useState(""); const [sP, setSP] = useState(""); const [sD, setSD] = useState(""); const [sDsc, setSDsc] = useState("");
   const [editPrices, setEditPrices] = useState<Record<string, string>>({});
@@ -1687,18 +1901,24 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
               </div>
               <div className="fg"><label className="fl">Hakkımda</label><textarea className="fi" rows={3} style={{ resize: "none" }} value={bio} onChange={e => setBio(e.target.value)} placeholder="Kendinizi kısaca tanıtın..."/></div>
               <div className="fg">
-                <label className="fl">Konum</label>
+                <label className="fl">İş Yeri Konumu</label>
                 <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
-                  <button className="btn btn-ghost" onClick={getMyLocation} style={{ alignSelf: "flex-start", gap: ".5rem" }}>
-                    <Navigation size={15}/> GPS ile Konumumu Al
-                  </button>
+                  <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
+                    <button className="btn btn-ghost" onClick={getMyLocation} style={{ gap: ".5rem" }}>
+                      <Navigation size={15}/> GPS ile Konumumu Al
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setShowLocPicker(true)} style={{ gap: ".5rem" }}>
+                      <Map size={15}/> Haritadan Seç
+                    </button>
+                  </div>
                   {masterLat !== ANKARA_CENTER.lat || masterLng !== ANKARA_CENTER.lng ? (
-                    <div style={{ fontSize: ".8125rem", color: "var(--ok)", display: "flex", alignItems: "center", gap: ".375rem", padding: ".5rem .75rem", background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.2)", borderRadius: "var(--r8)" }}>
-                      <MapPin size={13}/> Konum ayarlı: {masterLat.toFixed(4)}, {masterLng.toFixed(4)}
+                    <div style={{ fontSize: ".8125rem", color: "var(--ok)", display: "flex", alignItems: "center", gap: ".375rem", padding: ".5rem .75rem", background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.2)", borderRadius: "var(--r8)", flexWrap: "wrap" }}>
+                      <MapPin size={13}/> Konum ayarlı: {masterLat.toFixed(5)}, {masterLng.toFixed(5)}
+                      <a href={`https://maps.google.com/?q=${masterLat},${masterLng}`} target="_blank" rel="noopener noreferrer" style={{ color: "#60a5fa", fontSize: ".75rem", marginLeft: "auto" }}>Google Maps'te gör ↗</a>
                     </div>
                   ) : (
                     <div style={{ fontSize: ".8125rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".375rem" }}>
-                      <MapPin size={13}/> Henüz konum alınmadı — butona tıklayın
+                      <MapPin size={13}/> Henüz konum belirlenmedi — GPS alın veya haritadan seçin
                     </div>
                   )}
                 </div>
@@ -1789,16 +2009,15 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
             {myAppts.length === 0 ? (
               <div className="empty-state"><Bell size={36}/><h3>Randevu yok</h3><p>Müşteri randevu talebinde bulununca burada görünür</p></div>
             ) : (<>
-              {/* Ödeme alındı — işi tamamla bildirimi */}
-              {myAppts.filter(a => a.status === "paid").map(a => (
+              {myAppts.filter(a => a.status === "approved").map(a => (
                 <div key={a.id} style={{ background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.3)", borderRadius: "var(--r16)", padding: "1.25rem", marginBottom: "1rem" }}>
                   <div style={{ display: "flex", alignItems: "center", gap: ".625rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
                     <div style={{ width: 36, height: 36, borderRadius: "50%", background: "rgba(16,185,129,.2)", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                      <CreditCard size={18} style={{ color: "var(--ok)" }}/>
+                      <CheckCircle size={18} style={{ color: "var(--ok)" }}/>
                     </div>
                     <div>
-                      <div style={{ fontWeight: 700, color: "var(--ok)" }}>Ödeme Alındı — İş Tamamlanmayı Bekliyor</div>
-                      <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{a.customerName} · {a.date} · {a.timeSlot}</div>
+                      <div style={{ fontWeight: 700, color: "var(--ok)" }}>Onaylı Randevu — İş Yapmayı Bekliyor</div>
+                      <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{a.customerName} · {a.customerPhone} · {a.date} · {a.timeSlot}</div>
                     </div>
                     <div style={{ marginLeft: "auto", fontWeight: 800, color: "var(--ok)", fontSize: "1.125rem" }}>{fmtTL(a.total)}</div>
                   </div>
@@ -1818,13 +2037,13 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
                 <table className="tbl">
                   <thead><tr><th>Müşteri</th><th>Hizmetler</th><th>Tarih/Saat</th><th>Tutar</th><th>Durum</th><th>İşlem</th></tr></thead>
                   <tbody>
-                    {myAppts.filter(a => a.status !== "paid").map(a => (
+                    {myAppts.filter(a => a.status !== "approved").map(a => (
                       <tr key={a.id}>
                         <td><div style={{ fontWeight: 600 }}>{a.customerName}</div><div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{a.customerPhone}</div></td>
                         <td style={{ color: "var(--t2)", fontSize: ".8125rem", maxWidth: 180 }} className="ellipsis">{a.services.map(s => s.name).join(", ")}</td>
                         <td style={{ fontSize: ".8125rem", color: "var(--t2)", whiteSpace: "nowrap" }}>{a.date}<br/>{a.timeSlot}</td>
                         <td><strong style={{ color: "#60a5fa" }}>{fmtTL(a.total)}</strong></td>
-                        <td><span className={`status s-${a.status}`}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : "Tamamlandı"}</span></td>
+                        <td><span className={`status s-${a.status}`}>{a.status === "pending" ? "Bekliyor" : a.status === "rejected" ? "Reddedildi" : "Tamamlandı"}</span></td>
                         <td><div style={{ display: "flex", gap: ".375rem" }}>
                           {a.status === "pending" && <><button className="btn btn-success btn-xs" onClick={() => updateAppt(a.id, "approved")}><Check size={11}/>Onayla</button><button className="btn btn-danger btn-xs" onClick={() => updateAppt(a.id, "rejected")}><X size={11}/></button></>}
                         </div></td>
@@ -1873,6 +2092,14 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
       <nav className="mob-nav">
         {navItems.map(it => (<button key={it.id} className={`mob-nav-item ${tab === it.id ? "active" : ""}`} onClick={() => setTab(it.id)}>{it.icon}<span>{it.label}</span>{it.badge ? <div className="mob-nav-dot"/> : null}</button>))}
       </nav>
+
+      {showLocPicker && (
+        <LocationPickerModal
+          initial={{ lat: masterLat, lng: masterLng }}
+          onClose={() => setShowLocPicker(false)}
+          onSave={(p) => { setMasterLat(p.lat); setMasterLng(p.lng); setShowLocPicker(false); toast("Konum seçildi — kaydetmeyi unutmayın", "ok"); }}
+        />
+      )}
     </div>
   );
 }
@@ -1912,7 +2139,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
   const pending = masters.filter(m => m.isPending && !m.isApproved);
   const approved = masters.filter(m => m.isApproved);
   const pendingAppts = appointments.filter(a => a.status === "pending");
-  const totalRev = appointments.filter(a => ["paid","completed"].includes(a.status)).reduce((s, a) => s + a.total, 0);
+  const totalRev = appointments.filter(a => a.status === "completed").reduce((s, a) => s + a.total, 0);
 
   const approveMaster = (id: string) => { supabase?.update("masters", id, { is_approved: true, is_pending: false }).catch(console.error); setMasters(prev => { const n = prev.map(m => m.id === id ? { ...m, isApproved: true, isPending: false } : m); saveLS(LS.masters, n); return n; }); toast("Usta onaylandı!", "ok"); };
   const deleteMaster = (id: string) => { const m = masters.find(x => x.id === id); supabase?.delete("masters", id).catch(console.error); setMasters(prev => { const n = prev.filter(x => x.id !== id); saveLS(LS.masters, n); return n; }); if (m) { const u = users.find(x => x.masterId === id); if (u) { supabase?.delete("app_users", u.id).catch(console.error); setUsers(prev => { const n = prev.filter(x => x.id !== u.id); saveLS(LS.users, n); return n; }); } } toast("Usta silindi", "ok"); };
@@ -1928,10 +2155,15 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 
   const addMaster = () => {
     if (!fN || !fE || !fPh || !fPw || !fSp) { toast("Ad, e-posta, telefon, şifre ve uzmanlık zorunlu", "err"); return; }
-    if (users.find(u => u.email === fE)) { toast("Bu e-posta zaten kayıtlı", "err"); return; }
+    const eN = fE.trim().toLowerCase();
+    const phN = fPh.replace(/[^\d]/g, "");
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(eN)) { toast("Geçerli bir e-posta girin", "err"); return; }
+    if (!/^(05\d{9}|5\d{9})$/.test(phN)) { toast("Geçerli bir telefon girin (05xx...)", "err"); return; }
+    if (users.find(u => u.email.trim().toLowerCase() === eN)) { toast("Bu e-posta zaten kayıtlı", "err"); return; }
+    if (users.find(u => u.phone.replace(/[^\d]/g, "") === phN)) { toast("Bu telefon zaten kayıtlı", "err"); return; }
     const mid = "m_" + uid(); const uid2 = "u_" + uid();
-    const nu: AppUser = { id: uid2, name: fN, email: fE, phone: fPh, password: fPw, securityAnswer: "yok", role: "master", masterId: mid, createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
-    const nm: Master = { id: mid, userId: uid2, name: fN, avatar: fN.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2), specialty: fSp, district: fDist, rating: 0, completedJobs: 0, isApproved: true, isPending: false, services: [], bio: fBio, phone: fTel || fPh, email: fE, lat: ANKARA_CENTER.lat + (Math.random()-.5)*.1, lng: ANKARA_CENTER.lng + (Math.random()-.5)*.15, availability: { days: [], slots: [] }, category: fCat };
+    const nu: AppUser = { id: uid2, name: fN, email: eN, phone: phN, password: fPw, securityAnswer: "yok", role: "master", masterId: mid, createdAt: new Date(), totalSpent: 0, appointmentCount: 0 };
+    const nm: Master = { id: mid, userId: uid2, name: fN, avatar: fN.split(" ").map(n => n[0]).join("").toUpperCase().slice(0, 2), specialty: fSp, district: fDist, rating: 0, completedJobs: 0, isApproved: true, isPending: false, services: [], bio: fBio, phone: fTel || phN, email: eN, lat: ANKARA_CENTER.lat + (Math.random()-.5)*.1, lng: ANKARA_CENTER.lng + (Math.random()-.5)*.15, availability: { days: [], slots: [] }, category: fCat };
     supabase?.insert("app_users", userToDB(nu)).catch(console.error);
     supabase?.insert("masters", masterToDB(nm)).catch(console.error);
     setUsers(prev => { const n = [...prev, nu]; saveLS(LS.users, n); return n; });
@@ -1972,7 +2204,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
           {tab === "dashboard" && (<>
             <div className="page-header"><div className="page-title">Dashboard</div><div className="page-sub">OtoTamirciOnline.com yönetim paneli</div></div>
             <div className="stat-grid">
-              {[{ v: approved.length, l: "Onaylı Usta", c: "var(--ok)" }, { v: pending.length, l: "Onay Bekleyen", c: "var(--warn)" }, { v: appointments.length, l: "Toplam Randevu", c: "#60a5fa" }, { v: appointments.filter(a => ["paid","completed"].includes(a.status)).length, l: "Ödenen", c: "var(--ind)" }].map(s => (
+              {[{ v: approved.length, l: "Onaylı Usta", c: "var(--ok)" }, { v: pending.length, l: "Onay Bekleyen", c: "var(--warn)" }, { v: appointments.length, l: "Toplam Randevu", c: "#60a5fa" }, { v: appointments.filter(a => a.status === "completed").length, l: "Tamamlanan", c: "var(--ind)" }].map(s => (
                 <div key={s.l} className="stat-card"><div className="stat-val" style={{ color: s.c }}>{s.v}</div><div className="stat-label">{s.l}</div></div>
               ))}
             </div>
@@ -1988,7 +2220,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                 appointments.slice(-5).reverse().map(a => (
                   <div key={a.id} style={{ display: "flex", justifyContent: "space-between", padding: ".5rem 0", borderBottom: "1px solid var(--gb)", fontSize: ".8125rem", flexWrap: "wrap", gap: ".5rem" }}>
                     <span style={{ color: "var(--t2)" }}><strong style={{ color: "var(--t1)" }}>{a.customerName}</strong> → {a.masterName}</span>
-                    <span className={`status s-${a.status}`} style={{ fontSize: ".6875rem", padding: ".2rem .5rem" }}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "paid" ? "Ödendi" : a.status}</span>
+                    <span className={`status s-${a.status}`} style={{ fontSize: ".6875rem", padding: ".2rem .5rem" }}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "completed" ? "Tamamlandı" : a.status === "rejected" ? "Reddedildi" : a.status}</span>
                   </div>
                 ))
               }
@@ -2131,7 +2363,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
             {appointments.length === 0 ? <div className="empty-state"><Clock size={36}/><h3>Randevu yok</h3></div> : (
               <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
                 {[...appointments].sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).map(a => (
-                  <div key={a.id} className="card" style={{ cursor: "pointer", padding: "1rem", borderLeft: `3px solid ${a.status === "pending" ? "var(--warn)" : a.status === "approved" ? "var(--ok)" : a.status === "rejected" ? "var(--err)" : a.status === "paid" ? "#60a5fa" : "var(--ok)"}` }} onClick={() => setSelAppt(a)}>
+                  <div key={a.id} className="card" style={{ cursor: "pointer", padding: "1rem", borderLeft: `3px solid ${a.status === "pending" ? "var(--warn)" : a.status === "approved" ? "var(--ok)" : a.status === "rejected" ? "var(--err)" : "var(--ok)"}` }} onClick={() => setSelAppt(a)}>
                     <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", gap: ".75rem", flexWrap: "wrap" }}>
                       <div style={{ flex: 1, minWidth: 0 }}>
                         <div style={{ fontWeight: 700, fontSize: ".9375rem", marginBottom: ".125rem" }}>{a.customerName} → {a.masterName}</div>
@@ -2143,7 +2375,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                       </div>
                       <div style={{ display: "flex", flexDirection: "column", alignItems: "flex-end", gap: ".375rem", flexShrink: 0 }}>
                         <strong style={{ color: "#60a5fa", fontSize: "1rem" }}>{fmtTL(a.total)}</strong>
-                        <span className={`status s-${a.status}`} style={{ fontSize: ".6875rem" }}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : a.status === "paid" ? "Ödendi" : "Tamamlandı"}</span>
+                        <span className={`status s-${a.status}`} style={{ fontSize: ".6875rem" }}>{a.status === "pending" ? "Bekliyor" : a.status === "approved" ? "Onaylı" : a.status === "rejected" ? "Reddedildi" : "Tamamlandı"}</span>
                       </div>
                     </div>
                   </div>
@@ -2166,9 +2398,8 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                         ["Usta", selAppt.masterName],
                         ["Tarih / Saat", `${selAppt.date} · ${selAppt.timeSlot}`],
                         ["Oluşturuldu", new Date(selAppt.createdAt).toLocaleString("tr-TR")],
-                        ["Durum", (selAppt.status === "pending" ? "Bekliyor" : selAppt.status === "approved" ? "Onaylı" : selAppt.status === "rejected" ? "Reddedildi" : selAppt.status === "paid" ? "Ödendi" : "Tamamlandı")],
+                        ["Durum", (selAppt.status === "pending" ? "Bekliyor" : selAppt.status === "approved" ? "Onaylı" : selAppt.status === "rejected" ? "Reddedildi" : "Tamamlandı")],
                         ["Tutar", fmtTL(selAppt.total)],
-                        ["Ödeme", selAppt.payment ? `Kart *${selAppt.payment.cardLast4} · ${fmtTL(selAppt.payment.amount)} · ${new Date(selAppt.payment.paidAt).toLocaleString("tr-TR")}` : "Henüz ödeme yok"],
                       ].map(([k, v]) => (
                         <div key={k} style={{ display: "flex", justifyContent: "space-between", gap: ".75rem", paddingBottom: ".5rem", borderBottom: "1px solid var(--gb)", fontSize: ".875rem" }}>
                           <span style={{ color: "var(--t2)", flexShrink: 0 }}>{k}</span>
@@ -2210,7 +2441,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
             <div className="page-header"><div className="page-title">Kullanıcılar</div><div className="page-sub">{users.length} kayıtlı kullanıcı</div></div>
             <div className="tbl-wrap">
               <table className="tbl">
-                <thead><tr><th>Ad</th><th>E-posta</th><th>Telefon</th><th>Rol</th><th>Harcama</th><th>Randevu</th><th>Kayıt</th></tr></thead>
+                <thead><tr><th>Ad</th><th>E-posta</th><th>Telefon</th><th>Rol</th><th>Randevu</th><th>Kayıt</th></tr></thead>
                 <tbody>
                   {users.map(u => (
                     <tr key={u.id}>
@@ -2218,7 +2449,6 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                       <td style={{ color: "var(--t2)", fontSize: ".8125rem" }}>{u.email}</td>
                       <td style={{ color: "var(--t2)", fontSize: ".8125rem" }}>{u.phone}</td>
                       <td><span className={`rbadge r-${u.role}`}>{u.role === "admin" ? "Admin" : u.role === "master" ? "Usta" : "Müşteri"}</span></td>
-                      <td style={{ color: u.totalSpent > 0 ? "var(--ok)" : "var(--t3)" }}>{u.totalSpent > 0 ? fmtTL(u.totalSpent) : "—"}</td>
                       <td>{u.appointmentCount || "—"}</td>
                       <td style={{ color: "var(--t3)", fontSize: ".75rem" }}>{new Date(u.createdAt).toLocaleDateString("tr-TR")}</td>
                     </tr>
@@ -2251,7 +2481,7 @@ const FOOTER_CONTENT: Record<Exclude<FooterModal, null>, { title: string; body: 
         <li><strong style={{ color: "var(--t1)" }}>Usta Seç</strong> — Semtinize ve ihtiyacınıza göre onaylı ustalar arasından seçim yapın.</li>
         <li><strong style={{ color: "var(--t1)" }}>Randevu Al</strong> — Uygun gün ve saati seçin, notunuzu ekleyin.</li>
         <li><strong style={{ color: "var(--t1)" }}>Onay Bekle</strong> — Usta randevuyu onayladığında size bildirim gelir.</li>
-        <li><strong style={{ color: "var(--t1)" }}>Kolay Ödeme</strong> — İş tamamlandıktan sonra güvenli ödeme yapın.</li>
+        <li><strong style={{ color: "var(--t1)" }}>İşinizi Yaptırın</strong> — Ustanız geldiğinde veya yanına gittiğinizde anlaşma tamam.</li>
       </ol>
     ),
   },
@@ -2276,7 +2506,7 @@ const FOOTER_CONTENT: Record<Exclude<FooterModal, null>, { title: string; body: 
         <div style={{ display: "flex", flexDirection: "column", gap: ".75rem" }}>
           {[
             ["Onaylı Ustalar", "Tüm ustalar kimlik ve referans kontrolünden geçer."],
-            ["Güvenli Ödeme", "Ödemeler yalnızca iş tamamlandıktan sonra alınır."],
+            ["Şeffaf Fiyat", "Fiyatlar ustanın profilinde açıkça yayınlanır. Sürpriz ücret yoktur."],
             ["SSL Şifreleme", "Tüm veriler 256-bit SSL ile şifrelenir."],
             ["Gizlilik", "Kişisel bilgileriniz üçüncü taraflarla paylaşılmaz."],
           ].map(([title, desc]) => (
@@ -2338,7 +2568,7 @@ function Footer() {
           <div>
             <div className="footer-logo"><span className="g-text">OtoTamirci</span>Online</div>
             <div style={{ fontSize: ".75rem", color: "var(--t3)", marginBottom: ".75rem", letterSpacing: ".06em" }}>ototamircimonline.com</div>
-            <p className="footer-desc">Ankara'nın güvenilir usta platformu. Yakın ve tanıdık usta, şeffaf fiyat, kolay ödeme.</p>
+            <p className="footer-desc">Ankara'nın güvenilir usta platformu. Yakın ve tanıdık usta, şeffaf fiyat, kolay randevu.</p>
           </div>
           <div>
             <div className="footer-h">Platform</div>
@@ -2482,13 +2712,13 @@ export default function App() {
               </div>
               <p style={{ color: "var(--t2)", lineHeight: 1.8, fontSize: ".9rem", marginBottom: "1rem" }}>
                 OtoTamirciOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ve referanslı ustalarla buluşturan bir dijital platformdur.
-                Amacımız; şeffaf fiyatlandırma, güvenli ödeme ve kolay randevu sistemiyle hem müşterilere hem de ustalara en iyi deneyimi sunmaktır.
+                Amacımız; şeffaf fiyatlandırma, güvenilir ustalar ve kolay randevu sistemiyle hem müşterilere hem de ustalara en iyi deneyimi sunmaktır.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
                 {[
                   ["Misyon", "Araç sahiplerinin yakın çevresindeki güvenilir ustayı kolayca bulmasını sağlamak."],
                   ["Vizyon", "Türkiye genelinde en güvenilir araç bakım ve onarım platformu olmak."],
-                  ["Güvenlik", "Tüm ustalar kimlik ve referans doğrulamasından geçer. Ödemeler iş tamamlanana kadar güvende tutulur."],
+                  ["Güvenlik", "Tüm ustalar kimlik ve referans doğrulamasından geçer. Müşterilerimizin bilgileri KVKK'ya uygun korunur."],
                 ].map(([title, desc]) => (
                   <div key={title} style={{ background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".875rem 1rem" }}>
                     <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".25rem" }}>{title}</div>
