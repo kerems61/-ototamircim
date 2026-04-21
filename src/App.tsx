@@ -499,6 +499,10 @@ const CSS = `
 
   /* ── AUTH ── */
   .auth-outer{min-height:100dvh;display:flex;background:var(--bg);}
+  .auth-outer.compact{min-height:auto;}
+  .auth-outer.compact .auth-deco,.auth-outer.compact .auth-mob-top{display:none!important;}
+  .auth-outer.compact .auth-right{padding:0;}
+  .auth-outer.compact .auth-card{width:100%;max-width:none;border-radius:var(--r24);box-shadow:none;}
   .auth-deco{display:none;width:45%;background:linear-gradient(145deg,#060d20,#0c1838);border-right:1px solid var(--gb);flex-direction:column;justify-content:center;align-items:center;padding:3rem 2.5rem;position:relative;overflow:hidden;}
   @media(min-width:900px){.auth-deco{display:flex;}}
   .auth-deco-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,rgba(37,99,235,.12),transparent 65%),radial-gradient(ellipse 60% 50% at 70% 70%,rgba(79,70,229,.1),transparent 60%);pointer-events:none;}
@@ -967,7 +971,7 @@ function CarHero() {
 // ══════════════════════════════════════════════════════════════════
 // AUTH EKRANI
 // ══════════════════════════════════════════════════════════════════
-function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void }) {
+function AuthScreen({ users, setUsers, onLogin, compact = false, onClose }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void; compact?: boolean; onClose?: () => void }) {
   type V = "login" | "register" | "verify" | "forgot";
   const [view, setView] = useState<V>("login");
   const [lId, setLId] = useState(""); const [lPw, setLPw] = useState(""); const [showPw, setShowPw] = useState(false); const [lErr, setLErr] = useState("");
@@ -1067,8 +1071,11 @@ function AuthScreen({ users, setUsers, onLogin }: { users: AppUser[]; setUsers: 
   };
 
   return (
-    <div className="auth-outer">
-      <style>{CSS}</style>
+    <div className={`auth-outer${compact ? " compact" : ""}`}>
+      {!compact && <style>{CSS}</style>}
+      {compact && onClose && (
+        <button className="close-btn" style={{ position: "absolute", top: ".75rem", right: ".75rem", zIndex: 10 }} onClick={onClose}><X size={14}/></button>
+      )}
       {/* Mobil üst başlık */}
       <div className="auth-mob-top">
         <div style={{ fontWeight: 800, fontSize: "1.375rem", letterSpacing: "-.03em" }}><span className="g-text">OtoTamirci</span>Online</div>
@@ -1266,9 +1273,35 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
     return { appt, autoApprove };
   };
 
+  const validateBooking = (): string | null => {
+    if (!selected.length) return "En az bir hizmet seçin";
+    if (!slot) return "Saat aralığı seçin";
+    // Tarih kontrolü
+    if (date) {
+      const picked = new Date(date);
+      const today = new Date(); today.setHours(0,0,0,0);
+      if (picked < today) return "Geçmiş bir tarih seçemezsiniz";
+    }
+    // Usta müsaitlik kontrolü
+    const chosenDate = date ? new Date(date) : new Date();
+    const dayName = DAYS[dayIdxFromJS(chosenDate.getDay())];
+    const av = master.availability;
+    if (av?.days?.length && !av.days.includes(dayName)) {
+      return `Usta ${dayName} günü kapalı. Lütfen başka bir gün seçin.`;
+    }
+    if (av?.slots?.length && !av.slots.includes(slot)) {
+      return `Usta ${slot} saatinde hizmet vermiyor. Lütfen usta takviminden müsait bir saat seçin.`;
+    }
+    // O gün için dolu slot'lar
+    const dateStr = chosenDate.toLocaleDateString("tr-TR");
+    const taken = appointments.some(a => a.masterId === master.id && a.date === dateStr && a.timeSlot === slot && (a.status === "pending" || a.status === "approved"));
+    if (taken) return "Bu saat dolu. Farklı bir saat seçin.";
+    return null;
+  };
+
   const submit = () => {
-    if (!selected.length) { toast("En az bir hizmet seçin", "err"); return; }
-    if (!slot) { toast("Saat aralığı seçin", "err"); return; }
+    const err = validateBooking();
+    if (err) { toast(err, "err"); return; }
     if (isGuest) { setGuestStep("info"); return; }
     const { autoApprove } = createAppointment(user.id, user.name, user.phone);
     supabase?.update("app_users", user.id, { appointment_count: user.appointmentCount + 1 }).catch(console.error);
@@ -1472,11 +1505,38 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
               </div>
               <div className="card-title">Randevu Zamanı</div>
               <div className="fr2" style={{ marginBottom: ".875rem" }}>
-                <div className="fg"><label className="fl">Tarih</label><input type="date" className="fi" value={date} onChange={e => setDate(e.target.value)} min={new Date().toISOString().split("T")[0]}/></div>
+                <div className="fg"><label className="fl">Tarih</label><input type="date" className="fi" value={date} onChange={e => {
+                  const picked = new Date(e.target.value);
+                  const today = new Date(); today.setHours(0,0,0,0);
+                  if (picked < today) { toast("Geçmiş tarih seçemezsiniz", "err"); return; }
+                  setDate(e.target.value);
+                }} min={new Date().toISOString().split("T")[0]} max={new Date(Date.now() + 90 * 86400000).toISOString().split("T")[0]}/></div>
               </div>
               <label className="fl" style={{ marginBottom: ".5rem" }}>Saat Aralığı</label>
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: ".5rem", marginBottom: "1rem" }}>
-                {TIME_SLOTS.map(s => <button key={s} className={`btn ${slot === s ? "btn-primary" : "btn-ghost"}`} style={{ justifyContent: "center", fontSize: ".8125rem" }} onClick={() => setSlot(s)}>{s}</button>)}
+                {(() => {
+                  const chosenDate = date ? new Date(date) : new Date();
+                  const dayName = DAYS[dayIdxFromJS(chosenDate.getDay())];
+                  const av = master.availability;
+                  const dayClosed = av?.days?.length ? !av.days.includes(dayName) : false;
+                  const dateStr = chosenDate.toLocaleDateString("tr-TR");
+                  return TIME_SLOTS.map(s => {
+                    const slotClosed = av?.slots?.length ? !av.slots.includes(s) : false;
+                    const slotTaken = appointments.some(a => a.masterId === master.id && a.date === dateStr && a.timeSlot === s && (a.status === "pending" || a.status === "approved"));
+                    const disabled = dayClosed || slotClosed || slotTaken;
+                    const label = slotTaken ? "Dolu" : slotClosed ? "Kapalı" : "";
+                    return (
+                      <button
+                        key={s}
+                        className={`btn ${slot === s ? "btn-primary" : "btn-ghost"}`}
+                        style={{ justifyContent: "center", fontSize: ".8125rem", opacity: disabled ? .4 : 1, cursor: disabled ? "not-allowed" : "pointer", textDecoration: slotTaken ? "line-through" : "none" }}
+                        disabled={disabled}
+                        title={label || `${s} için randevu al`}
+                        onClick={() => setSlot(s)}
+                      >{s}{label && <span style={{ fontSize: ".625rem", marginLeft: ".25rem", opacity: .8 }}>· {label}</span>}</button>
+                    );
+                  });
+                })()}
               </div>
               <div className="fg"><label className="fl">Not (opsiyonel)</label><textarea className="fi" rows={2} style={{ resize: "none" }} placeholder="Araç veya sorun hakkında not..." value={notes} onChange={e => setNotes(e.target.value)}/></div>
               <div className="alert a-info"><AlertCircle size={13}/>Ödeme, iş tamamlandığında yüz yüze yapılır. Platform üzerinden ödeme alınmaz.</div>
@@ -1749,22 +1809,6 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                     const tomorrowFree = getFreeSlotsForDate(m, tomorrow, appointments);
                     const todayConfigured = !m.availability?.days?.length || m.availability.days.includes(DAYS[dayIdxFromJS(today.getDay())]);
                     const tomorrowConfigured = !m.availability?.days?.length || m.availability.days.includes(DAYS[dayIdxFromJS(tomorrow.getDay())]);
-                    const renderSlotRow = (label: string, free: string[], isDayConfigured: boolean) => (
-                      <div className="avail-row">
-                        <span className="avail-label">{label}</span>
-                        <div className="avail-slots">
-                          {!isDayConfigured ? (
-                            <span className="avail-empty">Kapalı</span>
-                          ) : m.availability?.slots?.length ? (
-                            m.availability.slots.map(s => (
-                              <span key={s} className={`avail-slot ${free.includes(s) ? "free" : "busy"}`}>{s}</span>
-                            ))
-                          ) : (
-                            <span className="avail-empty">Müsaitlik tanımlanmamış</span>
-                          )}
-                        </div>
-                      </div>
-                    );
                     return (
                       <div key={m.id} className="master-card" onClick={() => setSel(m)}>
                         {distKm != null && <div className="dist-badge"><Navigation size={10}/>{distKm.toFixed(1)} km</div>}
@@ -1784,16 +1828,21 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".625rem", flexWrap: "wrap" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><span style={{ color: "#fbbf24" }}>⭐</span><strong>{m.rating || "Yeni"}</strong></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Award size={12} style={{ color: "var(--ind)" }}/><strong>{m.completedJobs}</strong><span style={{ color: "var(--t2)" }}>iş</span></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Package size={12} style={{ color: "var(--t3)" }}/><strong>{m.services.length}</strong><span style={{ color: "var(--t2)" }}>hizmet</span></div>
                         </div>
-                        <div className="avail-block" onClick={e => e.stopPropagation()}>
-                          {renderSlotRow("Bugün", todayFree, todayConfigured)}
-                          {renderSlotRow("Yarın", tomorrowFree, tomorrowConfigured)}
+                        {/* Özet müsaitlik — detay için karta tıkla */}
+                        <div style={{ display: "flex", gap: ".5rem", fontSize: ".75rem", marginBottom: ".625rem", flexWrap: "wrap" }}>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: ".25rem", background: todayConfigured && todayFree.length ? "rgba(16,185,129,.1)" : "var(--g)", border: `1px solid ${todayConfigured && todayFree.length ? "rgba(16,185,129,.3)" : "var(--gb)"}`, color: todayConfigured && todayFree.length ? "#34d399" : "var(--t3)", borderRadius: 6, padding: ".2rem .5rem", fontWeight: 600 }}>
+                            <Clock size={10}/>Bugün: {!todayConfigured ? "Kapalı" : `${todayFree.length} boş saat`}
+                          </span>
+                          <span style={{ display: "inline-flex", alignItems: "center", gap: ".25rem", background: tomorrowConfigured && tomorrowFree.length ? "rgba(37,99,235,.1)" : "var(--g)", border: `1px solid ${tomorrowConfigured && tomorrowFree.length ? "rgba(37,99,235,.3)" : "var(--gb)"}`, color: tomorrowConfigured && tomorrowFree.length ? "#60a5fa" : "var(--t3)", borderRadius: 6, padding: ".2rem .5rem", fontWeight: 600 }}>
+                            <Clock size={10}/>Yarın: {!tomorrowConfigured ? "Kapalı" : `${tomorrowFree.length} boş saat`}
+                          </span>
                         </div>
-                        <div style={{ display: "flex", gap: ".5rem", marginBottom: ".5rem" }}>
+                        <div style={{ display: "flex", gap: ".5rem" }}>
                           <button className="btn btn-primary" style={{ flex: 1, fontSize: ".8125rem" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
                           <button
                             className="quick-book-btn"
@@ -2590,7 +2639,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
             <div className="page-header"><div className="page-title">Kullanıcılar</div><div className="page-sub">{users.length} kayıtlı kullanıcı</div></div>
             <div className="tbl-wrap">
               <table className="tbl">
-                <thead><tr><th>Ad</th><th>E-posta</th><th>Telefon</th><th>Rol</th><th>Randevu</th><th>Kayıt</th></tr></thead>
+                <thead><tr><th>Ad</th><th>E-posta</th><th>Telefon</th><th>Rol</th><th>Randevu</th><th>Kayıt</th><th>İşlem</th></tr></thead>
                 <tbody>
                   {users.map(u => (
                     <tr key={u.id}>
@@ -2600,6 +2649,22 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                       <td><span className={`rbadge r-${u.role}`}>{u.role === "admin" ? "Admin" : u.role === "master" ? "Usta" : "Müşteri"}</span></td>
                       <td>{u.appointmentCount || "—"}</td>
                       <td style={{ color: "var(--t3)", fontSize: ".75rem" }}>{new Date(u.createdAt).toLocaleDateString("tr-TR")}</td>
+                      <td>
+                        {u.role === "admin" ? (
+                          <span style={{ fontSize: ".75rem", color: "var(--t3)" }}>—</span>
+                        ) : (
+                          <button className="btn btn-danger btn-xs" onClick={() => {
+                            if (!confirm(`${u.name} kullanıcısını silmek istediğinize emin misiniz? Bu işlem geri alınamaz.`)) return;
+                            if (u.role === "master" && u.masterId) {
+                              supabase?.delete("masters", u.masterId).catch(console.error);
+                              setMasters(prev => { const n = prev.filter(m => m.id !== u.masterId); saveLS(LS.masters, n); return n; });
+                            }
+                            supabase?.delete("app_users", u.id).catch(console.error);
+                            setUsers(prev => { const n = prev.filter(x => x.id !== u.id); saveLS(LS.users, n); return n; });
+                            toast(`${u.name} silindi`, "ok");
+                          }}><Trash2 size={11}/>Sil</button>
+                        )}
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -2762,10 +2827,22 @@ export default function App() {
   });
   const [masters, setMasters] = useState<Master[]>(() => loadLS<Master[]>(LS.masters, []));
   const [appointments, setAppointments] = useState<Appointment[]>(() => loadLS<Appointment[]>(LS.appointments, []));
-  const [currentUser, setCurrentUser] = useState<AppUser | null>(null);
+  const [currentUser, setCurrentUser] = useState<AppUser | null>(() => {
+    try {
+      const savedId = localStorage.getItem("oto_session");
+      if (!savedId) return null;
+      const list = loadLS<AppUser[]>(LS.users, []);
+      return list.find(u => u.id === savedId) || null;
+    } catch { return null; }
+  });
+
+  // Session persist — kullanıcı değişince localStorage'a yaz
+  useEffect(() => {
+    if (currentUser) localStorage.setItem("oto_session", currentUser.id);
+    else localStorage.removeItem("oto_session");
+  }, [currentUser]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [previewMode, setPreviewMode] = useState<"customer" | "master" | null>(null);
-  const [isOnline, setIsOnline] = useState(HAS_SUPABASE);
   const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("oto_theme") as "dark"|"light") || "dark");
   const [showAbout, setShowAbout] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -2871,9 +2948,9 @@ export default function App() {
         />
         <Footer/>
         {showAuth && (
-          <div className="overlay" onClick={() => setShowAuth(false)} style={{ padding: 0 }}>
-            <div onClick={e => e.stopPropagation()} style={{ width: "100%", maxWidth: 480, maxHeight: "95dvh", overflow: "auto" }}>
-              <AuthScreen users={users} setUsers={setUsers} onLogin={u => { setCurrentUser(u); setShowAuth(false); }}/>
+          <div className="overlay" onClick={() => setShowAuth(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, position: "relative" }}>
+              <AuthScreen users={users} setUsers={setUsers} onLogin={u => { setCurrentUser(u); setShowAuth(false); }} compact onClose={() => setShowAuth(false)}/>
             </div>
           </div>
         )}
@@ -2948,10 +3025,6 @@ export default function App() {
           <button className="theme-btn nav-hide-mob" onClick={toggleTheme} title="Tema değiştir">
             {theme === "dark" ? "☀️ Açık" : "🌙 Koyu"}
           </button>
-          <div className={`db-indicator nav-hide-mob ${isOnline ? "db-online" : "db-offline"}`}>
-            {isOnline ? <Wifi size={10}/> : <WifiOff size={10}/>}
-            {isOnline ? "Supabase" : "LocalDB"}
-          </div>
           <span className={`rbadge r-${currentUser.role} nav-hide-mob`}>{roleLabel[currentUser.role]}</span>
           <span className="nav-name">{currentUser.name}</span>
           <span className="nav-phone">{currentUser.phone}</span>
