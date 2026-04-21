@@ -860,16 +860,6 @@ function SocialFabs() {
   return (
     <div className="social-fabs">
       <a
-        className="social-fab ig"
-        href={`https://instagram.com/${CONTACT_INSTAGRAM}`}
-        target="_blank"
-        rel="noopener noreferrer"
-        aria-label="Instagram'da takip edin"
-      >
-        <InstagramIcon size={16}/>
-        Instagram
-      </a>
-      <a
         className="social-fab"
         href={`https://wa.me/${waNumber}?text=${msg}`}
         target="_blank"
