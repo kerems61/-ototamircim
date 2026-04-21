@@ -2235,7 +2235,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
   users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   appointments: Appointment[]; setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void;
-  onPreview: (mode: "customer" | "master" | null) => void;
+  onPreview: (mode: "customer" | "master" | null, masterId?: string | null) => void;
 }) {
   type T = "dashboard" | "masters" | "addMaster" | "appointments" | "users";
   const [tab, setTab] = useState<T>("dashboard");
@@ -2398,9 +2398,10 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                         <td>{m.rating > 0 ? `⭐ ${m.rating}` : "—"}</td>
                         <td><span className="tag">{m.services.length} hizmet</span></td>
                         <td>{m.isApproved ? <span className="status s-approved"><CheckCircle size={10}/>Onaylı</span> : <span className="status s-pending"><Clock size={10}/>Bekliyor</span>}</td>
-                        <td><div style={{ display: "flex", gap: ".375rem" }}>
+                        <td><div style={{ display: "flex", gap: ".375rem", flexWrap: "wrap" }}>
                           <button className={`btn btn-xs ${svcMaster === m.id ? "btn-primary" : "btn-ghost"}`} title="Hizmetleri yönet" onClick={() => { setSvcMaster(svcMaster === m.id ? null : m.id); setEditMaster(null); }}><Package size={11}/></button>
                           <button className={`btn btn-xs ${editMaster === m.id ? "btn-primary" : "btn-ghost"}`} title="Bilgileri düzenle" onClick={() => { setEditMaster(editMaster === m.id ? null : m.id); setSvcMaster(null); startEdit(m); }}><Edit3 size={11}/></button>
+                          <button className="btn btn-success btn-xs" title="Bu ustanın paneline gir" onClick={() => onPreview("master", m.id)}><Eye size={11}/>Panel</button>
                           <button className="btn btn-danger btn-xs" title="Ustayı sil" onClick={() => deleteMaster(m.id)}><Trash2 size={11}/></button>
                         </div></td>
                       </tr>
@@ -2853,6 +2854,7 @@ export default function App() {
   }, [currentUser]);
   const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [previewMode, setPreviewMode] = useState<"customer" | "master" | null>(null);
+  const [previewMasterId, setPreviewMasterId] = useState<string | null>(null);
   const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("oto_theme") as "dark"|"light") || "dark");
   const [showAbout, setShowAbout] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
@@ -3014,7 +3016,9 @@ export default function App() {
   }
 
   // Önizleme modu için ghost kullanıcı
-  const ghostMaster = previewMode === "master" ? masters.find(m => m.isApproved) : null;
+  const ghostMaster = previewMode === "master"
+    ? (previewMasterId ? masters.find(m => m.id === previewMasterId) : masters.find(m => m.isApproved))
+    : null;
   const ghostUser: AppUser | null = previewMode === "customer"
     ? { id: "preview", name: "Önizleme", email: "", phone: "", password: "", securityAnswer: "", role: "customer", createdAt: new Date(), totalSpent: 0, appointmentCount: 0 }
     : previewMode === "master" && ghostMaster
@@ -3090,8 +3094,11 @@ export default function App() {
       {previewMode && (
         <div className="preview-bar">
           <Eye size={14}/>
-          <span>Önizleme: <strong>{previewMode === "customer" ? "Müşteri Görünümü" : "Usta Görünümü"}</strong></span>
-          <button className="btn btn-warn btn-xs preview-exit" onClick={() => setPreviewMode(null)}><X size={11}/>Önizlemeden Çık</button>
+          <span>
+            Önizleme: <strong>{previewMode === "customer" ? "Müşteri Görünümü" : "Usta Paneli"}</strong>
+            {previewMode === "master" && ghostMaster && <span style={{ marginLeft: ".375rem", color: "#fbbf24" }}>— {ghostMaster.name}</span>}
+          </span>
+          <button className="btn btn-warn btn-xs preview-exit" onClick={() => { setPreviewMode(null); setPreviewMasterId(null); }}><X size={11}/>Önizlemeden Çık</button>
         </div>
       )}
 
@@ -3106,7 +3113,7 @@ export default function App() {
         <MasterPage user={activeUser} masters={masters} setMasters={setMasters} appointments={appointments} setAppointments={setAppointments} reviews={reviews} setReviews={setReviews} toast={addToast}/>
       )}
       {currentUser.role === "admin" && !previewMode && (
-        <AdminPage masters={masters} setMasters={setMasters} users={users} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} toast={addToast} onPreview={setPreviewMode}/>
+        <AdminPage masters={masters} setMasters={setMasters} users={users} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} toast={addToast} onPreview={(mode, masterId) => { setPreviewMode(mode); setPreviewMasterId(masterId ?? null); }}/>
       )}
 
       <ToastContainer items={toasts} remove={removeToast}/>
