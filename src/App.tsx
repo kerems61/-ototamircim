@@ -552,6 +552,17 @@ const CSS = `
   .deco-stat-n{font-weight:800;font-size:1.5rem;text-align:center;}
   .deco-stat-l{font-size:.75rem;color:var(--t3);margin-top:.2rem;text-align:center;}
 
+  /* ── USTA BUL HERO BAŞLIK ── */
+  .find-hero{position:relative;border-radius:var(--r24);padding:2rem 1.5rem 1.75rem;margin-bottom:1.5rem;overflow:hidden;border:1px solid rgba(79,70,229,.28);background:linear-gradient(135deg,rgba(37,99,235,.14) 0%,rgba(79,70,229,.12) 45%,rgba(109,40,217,.14) 100%);box-shadow:0 14px 42px rgba(37,99,235,.12),inset 0 1px 0 rgba(255,255,255,.04);}
+  body.light-mode .find-hero{background:linear-gradient(135deg,rgba(37,99,235,.1) 0%,rgba(79,70,229,.08) 45%,rgba(109,40,217,.1) 100%);}
+  .find-hero-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 60% at 25% 20%,rgba(96,165,250,.16),transparent 60%),radial-gradient(ellipse 60% 55% at 78% 80%,rgba(167,139,250,.14),transparent 60%);}
+  .find-hero-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem;}
+  .find-hero-logo-wrap{width:88px;height:88px;border-radius:22px;display:flex;align-items:center;justify-content:center;background:linear-gradient(135deg,rgba(255,255,255,.06),rgba(255,255,255,.02));border:1px solid rgba(255,255,255,.1);backdrop-filter:blur(10px);box-shadow:0 10px 28px rgba(79,70,229,.35);margin-bottom:.25rem;}
+  body.light-mode .find-hero-logo-wrap{background:linear-gradient(135deg,rgba(255,255,255,.8),rgba(255,255,255,.4));border-color:rgba(0,0,0,.08);}
+  .find-hero-title{font-size:clamp(2rem,5.5vw,3rem);font-weight:900;letter-spacing:-.04em;line-height:1.05;background:linear-gradient(135deg,#60a5fa 0%,#818cf8 45%,#c084fc 100%);-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;text-shadow:0 4px 24px rgba(129,140,248,.2);}
+  .find-hero-sub{font-size:clamp(.875rem,2vw,1rem);color:var(--t2);line-height:1.5;max-width:420px;}
+  @media(max-width:639px){.find-hero{padding:1.5rem 1rem 1.25rem;}.find-hero-logo-wrap{width:72px;height:72px;border-radius:18px;}}
+
   /* ── USTA KARTLARI ── */
   .masters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;width:100%;max-width:100%;}
   .master-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;cursor:pointer;transition:border-color .25s,box-shadow .25s,transform .25s;position:relative;min-width:0;overflow:hidden;}
@@ -1691,11 +1702,14 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
         <div className="content">
           {/* USTA BUL */}
           {tab === "find" && (<>
-            <div className="page-header" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: ".625rem" }}>
-              <BrandLogo size={56}/>
-              <div>
-                <div className="page-title" style={{ background: "linear-gradient(135deg, #60a5fa 0%, #818cf8 50%, #a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontSize: "clamp(1.5rem, 4vw, 2.125rem)", fontWeight: 900, letterSpacing: "-.035em" }}>Usta Bul</div>
-                <div className="page-sub" style={{ marginTop: ".125rem" }}>Onaylı, referanslı Ankara ustalarını keşfedin</div>
+            <div className="find-hero">
+              <div className="find-hero-bg"/>
+              <div className="find-hero-inner">
+                <div className="find-hero-logo-wrap">
+                  <BrandLogo size={80}/>
+                </div>
+                <div className="find-hero-title">Usta Bul</div>
+                <div className="find-hero-sub">Onaylı, referanslı Ankara ustalarını keşfedin</div>
               </div>
             </div>
 
