@@ -554,6 +554,12 @@ const CSS = `
   .deco-stat-n{font-weight:800;font-size:1.5rem;text-align:center;}
   .deco-stat-l{font-size:.75rem;color:var(--t3);margin-top:.2rem;text-align:center;}
 
+  /* ── WHATSAPP BİZE ULAŞIN ── */
+  .wa-fab{position:fixed;right:0;top:50%;transform:translateY(-50%);z-index:700;background:linear-gradient(135deg,#25d366,#1ebe57);color:#fff;border:none;cursor:pointer;padding:.875rem .625rem;border-radius:var(--r12) 0 0 var(--r12);writing-mode:vertical-rl;text-orientation:mixed;font-family:'Outfit',sans-serif;font-weight:700;font-size:.8125rem;letter-spacing:.04em;display:flex;align-items:center;gap:.4rem;box-shadow:-6px 6px 24px rgba(37,211,102,.35);transition:all .2s;text-decoration:none;}
+  .wa-fab:hover{padding-right:.875rem;box-shadow:-8px 8px 30px rgba(37,211,102,.5);}
+  .wa-fab svg{transform:rotate(90deg);}
+  @media(max-width:639px){.wa-fab{padding:.625rem .4375rem;font-size:.6875rem;top:auto;bottom:calc(var(--mob-nav) + 5rem);transform:none;}}
+
   /* ── SCROLL TO TOP ── */
   .scroll-top{position:fixed;bottom:calc(var(--mob-nav) + 1rem);right:1rem;z-index:700;width:46px;height:46px;border-radius:50%;border:1px solid rgba(129,140,248,.4);background:linear-gradient(135deg,rgba(37,99,235,.95),rgba(79,70,229,.95));color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 28px rgba(79,70,229,.45);backdrop-filter:blur(8px);transition:opacity .25s,transform .25s;opacity:0;transform:translateY(12px) scale(.85);pointer-events:none;}
   .scroll-top.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
@@ -831,6 +837,26 @@ const getFreeSlotsForDate = (m: Master, date: Date, appointments: Appointment[])
 // ══════════════════════════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════════════════════════
+function WhatsAppFab() {
+  const phone = CONTACT_PHONE.replace(/\D/g, "");
+  const waNumber = phone.startsWith("0") ? "90" + phone.slice(1) : phone;
+  const msg = encodeURIComponent("Merhaba, OtoTamircimOnline hakkında bilgi almak istiyorum.");
+  return (
+    <a
+      className="wa-fab"
+      href={`https://wa.me/${waNumber}?text=${msg}`}
+      target="_blank"
+      rel="noopener noreferrer"
+      aria-label="WhatsApp ile bize ulaşın"
+    >
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor" aria-hidden>
+        <path d="M19.05 4.91A10 10 0 0 0 12 2a10 10 0 0 0-8.5 15.19L2 22l4.95-1.3A10 10 0 0 0 22 12a10 10 0 0 0-2.95-7.09ZM12 20.15a8.14 8.14 0 0 1-4.15-1.13l-.3-.18-3.07.8.82-3-.2-.31A8.16 8.16 0 1 1 12 20.15Zm4.49-6.1c-.24-.12-1.44-.71-1.66-.79s-.38-.12-.55.12-.63.79-.77.95-.28.18-.52.06a6.67 6.67 0 0 1-2-1.23 7.5 7.5 0 0 1-1.4-1.72c-.14-.24 0-.37.11-.49s.24-.28.36-.42a1.58 1.58 0 0 0 .24-.4.44.44 0 0 0 0-.42c-.06-.12-.55-1.33-.75-1.81s-.4-.41-.55-.41h-.47a.9.9 0 0 0-.65.31 2.74 2.74 0 0 0-.86 2 4.77 4.77 0 0 0 1 2.54 10.85 10.85 0 0 0 4.16 3.68 14.22 14.22 0 0 0 1.4.52 3.33 3.33 0 0 0 1.53.1 2.51 2.51 0 0 0 1.65-1.16 2 2 0 0 0 .14-1.16c-.06-.1-.22-.17-.46-.29Z"/>
+      </svg>
+      Bize Ulaşın
+    </a>
+  );
+}
+
 function ScrollTopButton() {
   const [show, setShow] = useState(false);
   useEffect(() => {
@@ -3098,6 +3124,7 @@ export default function App() {
             </div>
           </div>
         )}
+        <WhatsAppFab/>
         <ScrollTopButton/>
         <ToastContainer items={toasts} remove={removeToast}/>
       </div>
@@ -3205,7 +3232,8 @@ export default function App() {
         <AdminPage masters={masters} setMasters={setMasters} users={users} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} toast={addToast} onPreview={(mode, masterId) => { setPreviewMode(mode); setPreviewMasterId(masterId ?? null); }}/>
       )}
 
-      <ScrollTopButton/>
+      <WhatsAppFab/>
+        <ScrollTopButton/>
         <ToastContainer items={toasts} remove={removeToast}/>
     </div>
   );
