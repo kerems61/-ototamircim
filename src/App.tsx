@@ -438,8 +438,8 @@ const CSS = `
   .mob-nav-dot{position:absolute;top:.375rem;right:.875rem;width:6px;height:6px;border-radius:50%;background:var(--bl);}
 
   /* ── İÇERİK ── */
-  .content{flex:1;padding:1rem 1.5rem 1.5rem;overflow-y:auto;overflow-x:hidden;max-width:100%;min-width:0;}
-  @media(min-width:768px){.content{padding:1.25rem 2.5rem 2rem;}}
+  .content{flex:1;padding:.25rem 1rem 1.5rem;overflow-y:auto;overflow-x:hidden;max-width:100%;min-width:0;}
+  @media(min-width:768px){.content{padding:.5rem 2rem 2rem;}}
   .page-header{margin-bottom:1.75rem;}
   .page-title{font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;letter-spacing:-.03em;}
   .page-sub{color:var(--t2);font-size:.9375rem;margin-top:.25rem;line-height:1.5;}
@@ -561,7 +561,7 @@ const CSS = `
   @media(min-width:768px){.scroll-top{bottom:1.5rem;right:1.5rem;width:52px;height:52px;}}
 
   /* ── USTA BUL HERO BAŞLIK ── */
-  .find-hero{position:relative;border-radius:var(--r24);padding:2rem 1.5rem 1.75rem;margin-bottom:1.5rem;overflow:hidden;border:1px solid rgba(79,70,229,.28);background:linear-gradient(135deg,rgba(37,99,235,.14) 0%,rgba(79,70,229,.12) 45%,rgba(109,40,217,.14) 100%);box-shadow:0 14px 42px rgba(37,99,235,.12),inset 0 1px 0 rgba(255,255,255,.04);}
+  .find-hero{position:relative;border-radius:var(--r24);padding:1.5rem 1.5rem 1.375rem;margin:0 0 1.25rem;overflow:hidden;border:1px solid rgba(79,70,229,.28);background:linear-gradient(135deg,rgba(37,99,235,.14) 0%,rgba(79,70,229,.12) 45%,rgba(109,40,217,.14) 100%);box-shadow:0 14px 42px rgba(37,99,235,.12),inset 0 1px 0 rgba(255,255,255,.04);}
   body.light-mode .find-hero{background:linear-gradient(135deg,rgba(37,99,235,.1) 0%,rgba(79,70,229,.08) 45%,rgba(109,40,217,.1) 100%);}
   .find-hero-bg{position:absolute;inset:0;pointer-events:none;background:radial-gradient(ellipse 70% 60% at 25% 20%,rgba(96,165,250,.16),transparent 60%),radial-gradient(ellipse 60% 55% at 78% 80%,rgba(167,139,250,.14),transparent 60%);}
   .find-hero-inner{position:relative;display:flex;flex-direction:column;align-items:center;text-align:center;gap:.5rem;}
