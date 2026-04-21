@@ -665,7 +665,10 @@ const CSS = `
   .footer-logo{font-weight:800;font-size:1.125rem;letter-spacing:-.03em;margin-bottom:.5rem;}
   .footer-desc{font-size:.875rem;color:var(--t2);line-height:1.65;max-width:240px;}
   .footer-h{font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t1);margin-bottom:.875rem;}
-  .footer-link{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--t2);margin-bottom:.5rem;}
+  .footer-link{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--t2);margin-bottom:.5rem;line-height:1.4;}
+  .footer-link-btn{cursor:pointer;transition:color .15s;}
+  .footer-link-btn:hover{color:var(--t1);}
+  .footer-link svg{flex-shrink:0;opacity:.75;}
   .footer-bottom{max-width:1100px;margin:0 auto;border-top:1px solid var(--gb);padding-top:1.25rem;display:flex;justify-content:space-between;align-items:center;font-size:.8125rem;color:var(--t3);flex-wrap:wrap;gap:.5rem;}
 
   /* ── DB BAĞLANTI DURUMU ── */
@@ -971,9 +974,9 @@ function CarHero() {
 // ══════════════════════════════════════════════════════════════════
 // AUTH EKRANI
 // ══════════════════════════════════════════════════════════════════
-function AuthScreen({ users, setUsers, onLogin, compact = false, onClose }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void; compact?: boolean; onClose?: () => void }) {
+function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaultView = "login" }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void; compact?: boolean; onClose?: () => void; defaultView?: "login" | "register" }) {
   type V = "login" | "register" | "verify" | "forgot";
-  const [view, setView] = useState<V>("login");
+  const [view, setView] = useState<V>(defaultView);
   const [lId, setLId] = useState(""); const [lPw, setLPw] = useState(""); const [showPw, setShowPw] = useState(false); const [lErr, setLErr] = useState("");
   const [rN, setRN] = useState(""); const [rE, setRE] = useState(""); const [rPh, setRPh] = useState(""); const [rPw, setRPw] = useState(""); const [rPw2, setRPw2] = useState(""); const [rSec, setRSec] = useState(""); const [rRole, setRRole] = useState<"customer" | "master">("customer"); const [rErr, setRErr] = useState("");
   const [fId, setFId] = useState(""); const [fAns, setFAns] = useState(""); const [fNPw, setFNPw] = useState(""); const [fStep, setFStep] = useState<"find"|"ans"|"newpw"|"done">("find"); const [fUser, setFUser] = useState<AppUser | null>(null); const [fErr, setFErr] = useState("");
@@ -1221,47 +1224,19 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose }: { us
 // ══════════════════════════════════════════════════════════════════
 // MÜŞTERİ — Usta Detay Modal
 // ══════════════════════════════════════════════════════════════════
-function MasterModal({ master, user, appointments, setAppointments, setUsers, toast, onClose, isGuest = false, onGuestBooked }: {
+function MasterModal({ master, user, appointments, setAppointments, setUsers, toast, onClose, isGuest = false, onGuestNeedsAuth }: {
   master: Master; user: AppUser; appointments: Appointment[];
   setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void; onClose: () => void;
   isGuest?: boolean;
-  onGuestBooked?: () => void;
+  onGuestNeedsAuth?: () => void;
 }) {
   const [selected, setSelected] = useState<Service[]>([]);
   const [slot, setSlot] = useState(""); const [date, setDate] = useState(""); const [notes, setNotes] = useState("");
   const existing = !isGuest ? appointments.find(a => a.masterId === master.id && a.customerId === user.id && ["pending", "approved"].includes(a.status)) : undefined;
   const total = selected.reduce((s, v) => s + v.price, 0);
   const toggle = (s: Service) => setSelected(prev => prev.find(x => x.id === s.id) ? prev.filter(x => x.id !== s.id) : [...prev, s]);
-
-  // Guest rezervasyon akışı
-  const [guestStep, setGuestStep] = useState<"form" | "info" | "verify" | "done">("form");
-  const [gName, setGName] = useState(""); const [gPhone, setGPhone] = useState(""); const [gEmail, setGEmail] = useState("");
-  const [gErr, setGErr] = useState("");
-  const [gCode, setGCode] = useState(""); const [gEntered, setGEntered] = useState("");
-  const [gSending, setGSending] = useState(false); const [gDemoMode, setGDemoMode] = useState(false); const [gCooldown, setGCooldown] = useState(0);
-
-  useEffect(() => {
-    if (gCooldown <= 0) return;
-    const t = setInterval(() => setGCooldown(c => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  }, [gCooldown]);
-
-  // Türk mobil operatör prefix listesi (5XX ile başlayan geçerli 3 haneli prefix'ler)
-  const TR_MOBILE_PREFIXES = [
-    "500","501","502","503","504","505","506","507","508","509",
-    "530","531","532","533","534","535","536","537","538","539",
-    "540","541","542","543","544","545","546","547","548","549",
-    "551","552","553","554","555","556","557","558","559",
-  ];
-  const validateTRPhone = (raw: string): { ok: boolean; digits: string; err?: string } => {
-    const digits = raw.replace(/\D/g, "").replace(/^90/, "").replace(/^0/, "");
-    if (digits.length !== 10) return { ok: false, digits, err: "Telefon 10 haneli olmalı (5xx xxx xx xx)" };
-    const prefix = digits.slice(0, 3);
-    if (!TR_MOBILE_PREFIXES.includes(prefix)) return { ok: false, digits, err: `Geçersiz operatör prefixi (${prefix}). Gerçek bir mobil numara girin.` };
-    return { ok: true, digits: "0" + digits };
-  };
 
   const createAppointment = (customerId: string, customerName: string, customerPhone: string) => {
     const av = master.availability;
@@ -1302,42 +1277,11 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
   const submit = () => {
     const err = validateBooking();
     if (err) { toast(err, "err"); return; }
-    if (isGuest) { setGuestStep("info"); return; }
+    if (isGuest) { onClose(); onGuestNeedsAuth?.(); return; }
     const { autoApprove } = createAppointment(user.id, user.name, user.phone);
     supabase?.update("app_users", user.id, { appointment_count: user.appointmentCount + 1 }).catch(console.error);
     setUsers(prev => { const n = prev.map(u => u.id === user.id ? { ...u, appointmentCount: u.appointmentCount + 1 } : u); saveLS(LS.users, n); return n; });
     toast(autoApprove ? "Randevu otomatik onaylandı!" : "Randevu talebi usta onayına gönderildi!", "ok"); onClose();
-  };
-
-  const sendGuestCode = async () => {
-    if (!gName.trim()) { setGErr("Ad soyad zorunlu"); return; }
-    const ph = validateTRPhone(gPhone);
-    if (!ph.ok) { setGErr(ph.err || "Telefon geçersiz"); return; }
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(gEmail.trim().toLowerCase())) { setGErr("Geçerli e-posta girin"); return; }
-    setGErr(""); setGSending(true);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setGCode(code); setGEntered("");
-    const email = gEmail.trim().toLowerCase();
-    const w = window as unknown as { emailjs?: { send: (s: string, t: string, p: Record<string, string>, k: string) => Promise<unknown> }; EMAILJS_CONFIG?: { serviceId: string; templateId: string; publicKey: string } };
-    const cfg = w.EMAILJS_CONFIG;
-    let sent = false;
-    if (w.emailjs && cfg?.serviceId && cfg?.templateId && cfg?.publicKey) {
-      try { await w.emailjs.send(cfg.serviceId, cfg.templateId, { to_email: email, code, app_name: "OtoTamirciOnline", from_name: "OtoTamirciOnline" }, cfg.publicKey); sent = true; }
-      catch (err) { console.warn("EmailJS hata:", err); setGErr("Mail gönderilemedi, tekrar deneyin."); setGSending(false); return; }
-    } else {
-      console.info("[Demo] Kod:", code);
-    }
-    setGSending(false); setGDemoMode(!sent); setGCooldown(60); setGuestStep("verify");
-  };
-
-  const confirmGuestBooking = () => {
-    if (gEntered.trim() !== gCode) { setGErr("Kod hatalı"); return; }
-    const ph = validateTRPhone(gPhone);
-    const gid = "guest_" + uid();
-    const { autoApprove } = createAppointment(gid, gName.trim(), ph.digits);
-    setGuestStep("done");
-    toast(autoApprove ? "Randevunuz oluşturuldu ve otomatik onaylandı!" : "Randevu talebiniz gönderildi!", "ok");
-    setTimeout(() => { onGuestBooked?.(); }, 1800);
   };
 
   return (
@@ -1377,58 +1321,6 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
 
         <div style={{ display: "flex", flex: 1, overflow: "hidden", flexDirection: "column" as const }}>
           <div style={{ flex: 1, overflowY: "auto", padding: "1.25rem" }}>
-            {isGuest && guestStep === "info" && (
-              <div>
-                <div className="card-title"><User size={14}/>İletişim Bilgileriniz</div>
-                <div className="alert a-info" style={{ marginBottom: "1rem" }}>
-                  <Mail size={13}/><span>Ustanızın size ulaşabilmesi için iletişim bilgilerinizi girin. E-postanıza doğrulama kodu gelecek.</span>
-                </div>
-                <div className="fg"><label className="fl">Ad Soyad *</label><input className="fi" placeholder="Adınız Soyadınız" value={gName} onChange={e => setGName(e.target.value)}/></div>
-                <div className="fg"><label className="fl">Telefon * <span style={{ fontSize: ".6875rem", color: "var(--t3)", fontWeight: 500 }}>(Türk mobil numarası)</span></label><input className="fi" placeholder="05xx xxx xx xx" value={gPhone} onChange={e => setGPhone(e.target.value)} inputMode="tel"/></div>
-                <div className="fg"><label className="fl">E-posta * <span style={{ fontSize: ".6875rem", color: "var(--t3)", fontWeight: 500 }}>(doğrulama kodu buraya gelir)</span></label><input className="fi" type="email" placeholder="ornek@mail.com" value={gEmail} onChange={e => setGEmail(e.target.value)}/></div>
-                {gErr && <div className="alert a-err"><AlertCircle size={13}/>{gErr}</div>}
-                <div style={{ background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: ".75rem", marginTop: ".75rem" }}>
-                  <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginBottom: ".25rem" }}>Randevu Özeti</div>
-                  <div style={{ fontSize: ".8125rem" }}>{master.name} · {slot} · {date || new Date().toLocaleDateString("tr-TR")}</div>
-                  <div style={{ fontSize: ".8125rem", color: "var(--t2)", marginTop: ".25rem" }}>{selected.map(s => s.name).join(", ")} — <strong style={{ color: "#60a5fa" }}>{fmtTL(total)}</strong></div>
-                </div>
-              </div>
-            )}
-            {isGuest && guestStep === "verify" && (
-              <div>
-                <div className="card-title"><Mail size={14}/>E-posta Doğrulama</div>
-                {gSending ? (
-                  <div style={{ textAlign: "center", padding: "1rem" }}>
-                    <div className="spinner" style={{ margin: "0 auto 1rem" }}/>
-                    <div style={{ fontWeight: 700 }}>Kod gönderiliyor...</div>
-                  </div>
-                ) : gDemoMode ? (
-                  <div style={{ background: "rgba(245,158,11,.08)", border: "1px dashed rgba(245,158,11,.4)", borderRadius: "var(--r12)", padding: ".75rem 1rem", fontSize: ".8125rem", color: "#fbbf24", marginBottom: "1rem", lineHeight: 1.55 }}>
-                    <strong>Demo modu:</strong> Mail servisi yapılandırılmadı, kod: <strong style={{ fontFamily: "'JetBrains Mono',monospace", letterSpacing: ".15em" }}>{gCode}</strong>
-                  </div>
-                ) : (
-                  <div className="alert a-ok" style={{ marginBottom: "1rem" }}>
-                    <Mail size={13}/><span><strong>{gEmail}</strong> adresine 6 haneli kod gönderildi. Gelmediyse spam klasörünü kontrol edin.</span>
-                  </div>
-                )}
-                <div className="fg">
-                  <label className="fl">6 Haneli Kod</label>
-                  <input className="fi" value={gEntered} onChange={e => setGEntered(e.target.value.replace(/\D/g, "").slice(0, 6))} maxLength={6} inputMode="numeric" autoFocus style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.125rem", letterSpacing: ".35em", textAlign: "center" }} placeholder="••••••"/>
-                </div>
-                {gErr && <div className="alert a-err" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>{gErr}</div>}
-                <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={sendGuestCode} disabled={gCooldown > 0 || gSending}>
-                  {gSending ? "Gönderiliyor..." : gCooldown > 0 ? `Yeniden gönder (${gCooldown}sn)` : "Kodu Yeniden Gönder"}
-                </button>
-              </div>
-            )}
-            {isGuest && guestStep === "done" && (
-              <div style={{ textAlign: "center", padding: "2rem 1rem" }}>
-                <div className="success-circle"><Check size={28} style={{ color: "var(--ok)" }}/></div>
-                <h3 style={{ marginBottom: ".5rem" }}>Randevunuz Oluşturuldu!</h3>
-                <p style={{ color: "var(--t2)", fontSize: ".9rem" }}>Ustanız sizinle iletişime geçecek. E-postanıza randevu bilgileri gönderildi.</p>
-              </div>
-            )}
-            {(!isGuest || guestStep === "form") && <>
             {/* Haftalık müsaitlik grid */}
             {(master.availability?.days?.length || master.availability?.slots?.length) ? (() => {
               const todayIdx = dayIdxFromJS(new Date().getDay());
@@ -1557,7 +1449,6 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
                 </div>
               </div>
             </>)}
-            </>}
           </div>
 
           {/* Alt özet */}
@@ -1574,22 +1465,10 @@ function MasterModal({ master, user, appointments, setAppointments, setUsers, to
                 {existing.status === "approved" ? <><CheckCircle size={15}/>Randevunuz onaylandı! Belirlenen saatte ustanıza gidebilirsiniz.</> : <><Clock size={15}/>Usta randevunuzu değerlendiriyor...</>}
               </div>
             )}
-            {isGuest && guestStep === "form" && (
+            {isGuest && (
               <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={!selected.length || !slot} onClick={submit}>
-                <ChevronRight size={14}/>Devam: İletişim Bilgileri ({fmtTL(total)})
+                <ChevronRight size={14}/>Randevu Al ({fmtTL(total)})
               </button>
-            )}
-            {isGuest && guestStep === "info" && (
-              <div style={{ display: "flex", gap: ".5rem" }}>
-                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setGuestStep("form")}><ArrowLeft size={14}/>Geri</button>
-                <button className="btn btn-primary" style={{ flex: 2, padding: ".75rem" }} onClick={sendGuestCode} disabled={gSending}><Mail size={14}/>{gSending ? "Gönderiliyor..." : "Kodu Gönder"}</button>
-              </div>
-            )}
-            {isGuest && guestStep === "verify" && (
-              <div style={{ display: "flex", gap: ".5rem" }}>
-                <button className="btn btn-ghost" style={{ flex: 1 }} onClick={() => setGuestStep("info")}><ArrowLeft size={14}/>Geri</button>
-                <button className="btn btn-primary" style={{ flex: 2, padding: ".75rem" }} onClick={confirmGuestBooking} disabled={gEntered.length !== 6}><Check size={14}/>Randevuyu Onayla</button>
-              </div>
             )}
           </div>
         </div>
@@ -1641,14 +1520,16 @@ function ReviewForm({ appt, user, onSubmit }: { appt: Appointment; user: AppUser
 // ══════════════════════════════════════════════════════════════════
 // MÜŞTERİ SAYFASI
 // ══════════════════════════════════════════════════════════════════
-function CustomerPage({ masters, user, setUsers, appointments, setAppointments, reviews, setReviews, toast, isGuest = false, onRequireLogin }: {
+function CustomerPage({ masters, user, setUsers, appointments, setAppointments, reviews, setReviews, toast, isGuest = false, onRequireLogin, onOpenAuth }: {
   masters: Master[]; user: AppUser; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>;
   appointments: Appointment[]; setAppointments: React.Dispatch<React.SetStateAction<Appointment[]>>;
   reviews: Review[]; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void;
   isGuest?: boolean;
   onRequireLogin?: () => void;
+  onOpenAuth?: () => void;
 }) {
+  const openLogin = () => (onOpenAuth || onRequireLogin)?.();
   type T = "find" | "appointments" | "reviews" | "profile";
   const [tab, setTab] = useState<T>("find");
   const [view, setView] = useState<"list" | "map">("list");
@@ -1868,7 +1749,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
           {tab === "appointments" && (<>
             <div className="page-header"><div className="page-title">Randevularım</div></div>
             {isGuest ? (
-              <div className="empty-state"><Clock size={36}/><h3>Randevularınızı görmek için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Kayıt olursanız tüm randevularınızı buradan takip edebilirsiniz.</p><button className="btn btn-primary" onClick={() => onRequireLogin?.()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
+              <div className="empty-state"><Clock size={36}/><h3>Randevularınızı görmek için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Kayıt olursanız tüm randevularınızı buradan takip edebilirsiniz.</p><button className="btn btn-primary" onClick={() => openLogin()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
             ) : myAppts.length === 0 ? (
               <div className="empty-state"><Clock size={36}/><h3>Henüz randevunuz yok</h3><p>Usta seçerek ilk randevunuzu oluşturun</p></div>
             ) : myAppts.map(a => {
@@ -1911,7 +1792,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
               <div className="page-sub">Tamamlanan randevularınızı değerlendirin</div>
             </div>
             {isGuest && (
-              <div className="empty-state"><Star size={36}/><h3>Değerlendirme için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Tamamlanan randevularınızı ve değerlendirmelerinizi görmek için hesabınıza giriş yapın.</p><button className="btn btn-primary" onClick={() => onRequireLogin?.()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
+              <div className="empty-state"><Star size={36}/><h3>Değerlendirme için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Tamamlanan randevularınızı ve değerlendirmelerinizi görmek için hesabınıza giriş yapın.</p><button className="btn btn-primary" onClick={() => openLogin()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
             )}
             {/* Değerlendirilecekler */}
             {!isGuest && myAppts.filter(a => a.status === "completed" && !reviewedApptIds.has(a.id)).length > 0 && (<>
@@ -1943,7 +1824,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
           {tab === "profile" && (<>
             <div className="page-header"><div className="page-title">Profilim</div></div>
             {isGuest ? (
-              <div className="empty-state"><User size={36}/><h3>Profil için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Kayıt olursanız tüm randevularınızı takip edebilir, hızlı randevu alabilirsiniz.</p><button className="btn btn-primary" onClick={() => onRequireLogin?.()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
+              <div className="empty-state"><User size={36}/><h3>Profil için giriş yapın</h3><p style={{ marginBottom: "1rem" }}>Kayıt olursanız tüm randevularınızı takip edebilir, hızlı randevu alabilirsiniz.</p><button className="btn btn-primary" onClick={() => openLogin()}><User size={14}/>Giriş Yap / Kayıt Ol</button></div>
             ) : (<>
               <div className="stat-grid" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
                 <div className="stat-card"><div className="stat-val" style={{ color: "#60a5fa" }}>{user.appointmentCount}</div><div className="stat-label">Randevu</div></div>
@@ -1973,7 +1854,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
         ))}
       </nav>
 
-      {sel && <MasterModal master={sel} user={user} appointments={appointments} setAppointments={setAppointments} setUsers={setUsers} toast={toast} onClose={() => setSel(null)} isGuest={isGuest} onGuestBooked={() => setSel(null)}/>}
+      {sel && <MasterModal master={sel} user={user} appointments={appointments} setAppointments={setAppointments} setUsers={setUsers} toast={toast} onClose={() => setSel(null)} isGuest={isGuest} onGuestNeedsAuth={() => onRequireLogin?.()}/>}
     </div>
   );
 }
@@ -2787,12 +2668,10 @@ function Footer() {
           <div>
             <div className="footer-h">Platform</div>
             {links.map(l => (
-              <div key={l.key} className="footer-link" style={{ cursor: "pointer", transition: "color .15s" }}
-                onClick={() => setModal(l.key)}
-                onMouseEnter={e => (e.currentTarget.style.color = "var(--t1)")}
-                onMouseLeave={e => (e.currentTarget.style.color = "")}>
+              <button key={l.key} className="footer-link footer-link-btn" onClick={() => setModal(l.key)}
+                style={{ background: "none", border: "none", padding: 0, textAlign: "left", color: "inherit", font: "inherit" }}>
                 <ChevronRight size={12}/>{l.label}
-              </div>
+              </button>
             ))}
           </div>
           <div>
@@ -2846,6 +2725,8 @@ export default function App() {
   const [theme, setTheme] = useState<"dark" | "light">(() => (localStorage.getItem("oto_theme") as "dark"|"light") || "dark");
   const [showAbout, setShowAbout] = useState(false);
   const [showAuth, setShowAuth] = useState(false);
+  const [authView, setAuthView] = useState<"login" | "register">("login");
+  const [showBookingPrompt, setShowBookingPrompt] = useState(false);
   const [reviews, setReviews] = useState<Review[]>(() => loadLS<Review[]>(LS.reviews, []));
 
   // Tema class'ını body'e uygula
@@ -2944,13 +2825,55 @@ export default function App() {
           appointments={appointments} setAppointments={setAppointments}
           reviews={reviews} setReviews={setReviews} toast={addToast}
           isGuest
-          onRequireLogin={() => setShowAuth(true)}
+          onRequireLogin={() => setShowBookingPrompt(true)}
+          onOpenAuth={() => { setAuthView("login"); setShowAuth(true); }}
         />
         <Footer/>
+        {showBookingPrompt && (
+          <div className="overlay" onClick={() => setShowBookingPrompt(false)}>
+            <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, overflow: "visible" }}>
+              <div style={{ padding: "2rem 1.5rem 1.25rem", textAlign: "center", position: "relative" }}>
+                <button className="close-btn" style={{ position: "absolute", top: ".75rem", right: ".75rem" }} onClick={() => setShowBookingPrompt(false)}><X size={14}/></button>
+                <div style={{ width: 72, height: 72, borderRadius: "50%", background: "linear-gradient(135deg, var(--bl), var(--ind))", display: "flex", alignItems: "center", justifyContent: "center", margin: "0 auto 1rem", boxShadow: "0 8px 32px rgba(79,70,229,.4)" }}>
+                  <User size={32} color="#fff"/>
+                </div>
+                <h2 style={{ fontSize: "1.25rem", fontWeight: 800, letterSpacing: "-.02em", marginBottom: ".5rem" }}>
+                  Randevu İçin <span className="g-text">Üyelik Gerekli</span>
+                </h2>
+                <p style={{ fontSize: ".875rem", color: "var(--t2)", lineHeight: 1.6, marginBottom: "1.25rem" }}>
+                  Ücretsiz üyelikle randevu alın, tüm randevularınızı tek yerden takip edin ve ustanızla kolayca iletişim kurun.
+                </p>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".625rem", textAlign: "left", marginBottom: "1.5rem", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", padding: "1rem" }}>
+                  {[
+                    ["📋", "Tüm randevularınız tek panelde"],
+                    ["🕑", "Geçmiş hizmet geçmişiniz saklanır"],
+                    ["🔔", "Randevu onayı için anında bildirim"],
+                    ["✨", "Üyelik tamamen ücretsiz"],
+                  ].map(([icon, text]) => (
+                    <div key={text} style={{ display: "flex", alignItems: "center", gap: ".625rem", fontSize: ".8125rem", color: "var(--t1)" }}>
+                      <span style={{ fontSize: "1.125rem" }}>{icon}</span>{text}
+                    </div>
+                  ))}
+                </div>
+                <div style={{ display: "flex", flexDirection: "column", gap: ".5rem" }}>
+                  <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem", fontSize: ".9375rem" }} onClick={() => { setShowBookingPrompt(false); setAuthView("register"); setShowAuth(true); }}>
+                    <UserPlus size={15}/>Ücretsiz Hesap Oluştur
+                  </button>
+                  <button className="btn btn-ghost" style={{ width: "100%", padding: ".625rem" }} onClick={() => { setShowBookingPrompt(false); setAuthView("login"); setShowAuth(true); }}>
+                    Zaten Üyeyim — Giriş Yap
+                  </button>
+                  <button onClick={() => setShowBookingPrompt(false)} style={{ background: "none", border: "none", color: "var(--t3)", fontSize: ".8125rem", padding: ".375rem", cursor: "pointer", fontFamily: "'Outfit',sans-serif" }}>
+                    Vazgeç
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
         {showAuth && (
           <div className="overlay" onClick={() => setShowAuth(false)}>
             <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 440, position: "relative" }}>
-              <AuthScreen users={users} setUsers={setUsers} onLogin={u => { setCurrentUser(u); setShowAuth(false); }} compact onClose={() => setShowAuth(false)}/>
+              <AuthScreen users={users} setUsers={setUsers} onLogin={u => { setCurrentUser(u); setShowAuth(false); }} compact onClose={() => setShowAuth(false)} defaultView={authView}/>
             </div>
           </div>
         )}
