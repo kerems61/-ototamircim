@@ -1691,19 +1691,11 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
         <div className="content">
           {/* USTA BUL */}
           {tab === "find" && (<>
-            <div className="page-header">
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: ".75rem" }}>
-                <div style={{ display: "flex", alignItems: "center", gap: ".875rem" }}>
-                  <BrandLogo size={44}/>
-                  <div>
-                    <div className="page-title" style={{ background: "linear-gradient(135deg, var(--t1) 0%, var(--bl) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Usta Bul</div>
-                    <div className="page-sub">Onaylı, referanslı Ankara ustalarını keşfedin</div>
-                  </div>
-                </div>
-                <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
-                  <button className="btn btn-ghost btn-sm" onClick={getLoc} disabled={locLoading}><Navigation size={13}/>{locLoading ? "Alınıyor..." : "En Yakın"}</button>
-                  <div className="view-toggle"><button className={`vt-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")}><List size={13}/>Liste</button><button className={`vt-btn ${view === "map" ? "active" : ""}`} onClick={() => setView("map")}><Map size={13}/>Harita</button></div>
-                </div>
+            <div className="page-header" style={{ textAlign: "center", display: "flex", flexDirection: "column", alignItems: "center", gap: ".625rem" }}>
+              <BrandLogo size={56}/>
+              <div>
+                <div className="page-title" style={{ background: "linear-gradient(135deg, #60a5fa 0%, #818cf8 50%, #a78bfa 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text", fontSize: "clamp(1.5rem, 4vw, 2.125rem)", fontWeight: 900, letterSpacing: "-.035em" }}>Usta Bul</div>
+                <div className="page-sub" style={{ marginTop: ".125rem" }}>Onaylı, referanslı Ankara ustalarını keşfedin</div>
               </div>
             </div>
 
@@ -1722,6 +1714,12 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                   {c.icon}<span className="cat-tab-label">{c.label}</span>
                 </button>
               ))}
+            </div>
+
+            {/* En Yakın + Liste/Harita — arama kutusunun hemen üstünde */}
+            <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap", justifyContent: "flex-end", marginBottom: ".75rem" }}>
+              <button className="btn btn-ghost btn-sm" onClick={getLoc} disabled={locLoading}><Navigation size={13}/>{locLoading ? "Alınıyor..." : "En Yakın"}</button>
+              <div className="view-toggle"><button className={`vt-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")}><List size={13}/>Liste</button><button className={`vt-btn ${view === "map" ? "active" : ""}`} onClick={() => setView("map")}><Map size={13}/>Harita</button></div>
             </div>
 
             <div style={{ display: "flex", background: "var(--g)", border: "1px solid var(--gb)", borderRadius: "var(--r12)", overflow: "hidden", marginBottom: "1rem" }}>
