@@ -665,10 +665,13 @@ const CSS = `
   .footer-logo{font-weight:800;font-size:1.125rem;letter-spacing:-.03em;margin-bottom:.5rem;}
   .footer-desc{font-size:.875rem;color:var(--t2);line-height:1.65;max-width:240px;}
   .footer-h{font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t1);margin-bottom:.875rem;}
-  .footer-link{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--t2);margin-bottom:.5rem;line-height:1.4;}
-  .footer-link-btn{cursor:pointer;transition:color .15s;}
-  .footer-link-btn:hover{color:var(--t1);}
+  .footer-link{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--t2);margin:0 0 .5rem;line-height:1.4;padding:0;text-align:left;}
   .footer-link svg{flex-shrink:0;opacity:.75;}
+  .footer-link-btn{cursor:pointer;transition:color .15s;background:none;border:none;font:inherit;color:inherit;width:auto;-webkit-appearance:none;appearance:none;}
+  .footer-link-btn:hover{color:var(--t1);}
+  .footer-link-btn:focus{outline:none;color:var(--t2);}
+  .footer-link-btn:focus-visible{outline:2px solid rgba(37,99,235,.4);outline-offset:2px;border-radius:4px;}
+  .footer-link-btn:hover:focus{color:var(--t1);}
   .footer-bottom{max-width:1100px;margin:0 auto;border-top:1px solid var(--gb);padding-top:1.25rem;display:flex;justify-content:space-between;align-items:center;font-size:.8125rem;color:var(--t3);flex-wrap:wrap;gap:.5rem;}
 
   /* ── DB BAĞLANTI DURUMU ── */
@@ -2668,8 +2671,7 @@ function Footer() {
           <div>
             <div className="footer-h">Platform</div>
             {links.map(l => (
-              <button key={l.key} className="footer-link footer-link-btn" onClick={() => setModal(l.key)}
-                style={{ background: "none", border: "none", padding: 0, textAlign: "left", color: "inherit", font: "inherit" }}>
+              <button key={l.key} type="button" className="footer-link footer-link-btn" onClick={(e) => { setModal(l.key); e.currentTarget.blur(); }}>
                 <ChevronRight size={12}/>{l.label}
               </button>
             ))}
