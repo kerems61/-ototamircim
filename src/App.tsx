@@ -414,7 +414,7 @@ const CSS = `
     overflow-y:auto;display:none;
   }
   @media(min-width:768px){.sidebar{display:flex;flex-direction:column;}}
-  .sidebar-section{font-size:.8125rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#a78bfa;margin:.875rem 0 .625rem .5rem;display:flex;align-items:center;gap:.5rem;}
+  .sidebar-section{font-size:.8125rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#a78bfa;margin:.25rem 0 .625rem .5rem;display:flex;align-items:center;gap:.5rem;}
   .sidebar-section::before{content:'';width:14px;height:2px;border-radius:2px;background:linear-gradient(90deg,#60a5fa,#a78bfa);}
   .s-item{display:flex;align-items:center;gap:.75rem;padding:.75rem .875rem;border-radius:var(--r12);font-size:.95rem;color:var(--t2);cursor:pointer;background:none;border:1px solid transparent;font-family:'Outfit',sans-serif;width:100%;text-align:left;transition:all .18s;margin-bottom:4px;font-weight:600;position:relative;}
   .s-item:hover{background:var(--g);color:var(--t1);border-color:var(--gb);transform:translateX(2px);}
@@ -438,8 +438,8 @@ const CSS = `
   .mob-nav-dot{position:absolute;top:.375rem;right:.875rem;width:6px;height:6px;border-radius:50%;background:var(--bl);}
 
   /* ── İÇERİK ── */
-  .content{flex:1;padding:1.5rem;overflow-y:auto;overflow-x:hidden;max-width:100%;min-width:0;}
-  @media(min-width:768px){.content{padding:2.25rem 2.5rem;}}
+  .content{flex:1;padding:1rem 1.5rem 1.5rem;overflow-y:auto;overflow-x:hidden;max-width:100%;min-width:0;}
+  @media(min-width:768px){.content{padding:1.25rem 2.5rem 2rem;}}
   .page-header{margin-bottom:1.75rem;}
   .page-title{font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;letter-spacing:-.03em;}
   .page-sub{color:var(--t2);font-size:.9375rem;margin-top:.25rem;line-height:1.5;}
@@ -553,6 +553,12 @@ const CSS = `
   .deco-stats{display:flex;gap:1.5rem;justify-content:center;margin-top:2rem;border-top:1px solid var(--gb);padding-top:1.75rem;}
   .deco-stat-n{font-weight:800;font-size:1.5rem;text-align:center;}
   .deco-stat-l{font-size:.75rem;color:var(--t3);margin-top:.2rem;text-align:center;}
+
+  /* ── SCROLL TO TOP ── */
+  .scroll-top{position:fixed;bottom:calc(var(--mob-nav) + 1rem);right:1rem;z-index:700;width:46px;height:46px;border-radius:50%;border:1px solid rgba(129,140,248,.4);background:linear-gradient(135deg,rgba(37,99,235,.95),rgba(79,70,229,.95));color:#fff;display:flex;align-items:center;justify-content:center;cursor:pointer;box-shadow:0 10px 28px rgba(79,70,229,.45);backdrop-filter:blur(8px);transition:opacity .25s,transform .25s;opacity:0;transform:translateY(12px) scale(.85);pointer-events:none;}
+  .scroll-top.show{opacity:1;transform:translateY(0) scale(1);pointer-events:auto;}
+  .scroll-top:hover{transform:translateY(-4px) scale(1.05);box-shadow:0 14px 38px rgba(79,70,229,.6);}
+  @media(min-width:768px){.scroll-top{bottom:1.5rem;right:1.5rem;width:52px;height:52px;}}
 
   /* ── USTA BUL HERO BAŞLIK ── */
   .find-hero{position:relative;border-radius:var(--r24);padding:2rem 1.5rem 1.75rem;margin-bottom:1.5rem;overflow:hidden;border:1px solid rgba(79,70,229,.28);background:linear-gradient(135deg,rgba(37,99,235,.14) 0%,rgba(79,70,229,.12) 45%,rgba(109,40,217,.14) 100%);box-shadow:0 14px 42px rgba(37,99,235,.12),inset 0 1px 0 rgba(255,255,255,.04);}
@@ -825,6 +831,26 @@ const getFreeSlotsForDate = (m: Master, date: Date, appointments: Appointment[])
 // ══════════════════════════════════════════════════════════════════
 // TOAST
 // ══════════════════════════════════════════════════════════════════
+function ScrollTopButton() {
+  const [show, setShow] = useState(false);
+  useEffect(() => {
+    const onScroll = () => setShow(window.scrollY > 320);
+    window.addEventListener("scroll", onScroll, { passive: true });
+    onScroll();
+    return () => window.removeEventListener("scroll", onScroll);
+  }, []);
+  return (
+    <button
+      type="button"
+      aria-label="Sayfanın başına dön"
+      className={`scroll-top${show ? " show" : ""}`}
+      onClick={() => window.scrollTo({ top: 0, behavior: "smooth" })}
+    >
+      <ChevronDown size={22} style={{ transform: "rotate(180deg)" }}/>
+    </button>
+  );
+}
+
 function ToastContainer({ items, remove }: { items: ToastItem[]; remove: (id: number) => void }) {
   return (
     <div className="toast-wrap">
@@ -3072,6 +3098,7 @@ export default function App() {
             </div>
           </div>
         )}
+        <ScrollTopButton/>
         <ToastContainer items={toasts} remove={removeToast}/>
       </div>
     );
@@ -3178,7 +3205,8 @@ export default function App() {
         <AdminPage masters={masters} setMasters={setMasters} users={users} setUsers={setUsers} appointments={appointments} setAppointments={setAppointments} toast={addToast} onPreview={(mode, masterId) => { setPreviewMode(mode); setPreviewMasterId(masterId ?? null); }}/>
       )}
 
-      <ToastContainer items={toasts} remove={removeToast}/>
+      <ScrollTopButton/>
+        <ToastContainer items={toasts} remove={removeToast}/>
     </div>
   );
 }
