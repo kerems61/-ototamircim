@@ -328,9 +328,9 @@ const CSS = `
   body.light-mode .fi{background:rgba(0,0,0,.04);border-color:rgba(0,0,0,.12);}
   body.light-mode .fi:focus{background:rgba(37,99,235,.05);}
 
-  html{font-size:16px;scroll-behavior:smooth;}
-  body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);min-height:100dvh;overflow-x:hidden;-webkit-font-smoothing:antialiased;}
-  #root{min-height:100dvh;}
+  html{font-size:16px;scroll-behavior:smooth;overflow-x:hidden;width:100%;max-width:100vw;}
+  body{font-family:'Outfit',sans-serif;background:var(--bg);color:var(--t1);min-height:100dvh;overflow-x:hidden;width:100%;max-width:100vw;-webkit-font-smoothing:antialiased;}
+  #root{min-height:100dvh;overflow-x:hidden;max-width:100vw;}
   /* mobile overflow fix */
   *{-webkit-overflow-scrolling:touch;}
   p,a,h1,h2,h3,h4,h5,label{overflow-wrap:break-word;}
@@ -2246,6 +2246,17 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
   const [svcMaster, setSvcMaster] = useState<string | null>(null);
   const [aSvcN, setASvcN] = useState(""); const [aSvcP, setASvcP] = useState(""); const [aSvcD, setASvcD] = useState(""); const [aSvcDsc, setASvcDsc] = useState("");
 
+  // Usta değişince formu temizle + panele scroll
+  useEffect(() => {
+    setASvcN(""); setASvcP(""); setASvcD(""); setASvcDsc("");
+    if (svcMaster) {
+      requestAnimationFrame(() => {
+        const el = document.querySelector(`[data-svc-panel="${svcMaster}"]`);
+        if (el) el.scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+    }
+  }, [svcMaster]);
+
   const adminAddSvc = (masterId: string) => {
     if (!aSvcN || !aSvcP) { toast("İsim ve fiyat zorunlu", "err"); return; }
     const newSvc: Service = { id: "s_" + uid(), name: aSvcN, price: Number(aSvcP), duration: aSvcD || "Belirtilmedi", description: aSvcDsc };
@@ -2380,7 +2391,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                 <tbody>
                   {masters.map(m => (
                     <React.Fragment key={m.id}>
-                      <tr>
+                      <tr style={svcMaster === m.id || editMaster === m.id ? { background: "rgba(37,99,235,.08)" } : undefined}>
                         <td><div style={{ display: "flex", alignItems: "center", gap: ".75rem" }}><div className="avatar av-sm">{m.avatar}</div><div><div style={{ fontWeight: 600 }}>{m.name}</div><div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{m.email}</div></div></div></td>
                         <td style={{ color: "var(--t2)" }}>{m.specialty}</td>
                         <td style={{ color: "var(--t2)" }}>{m.district}</td>
@@ -2388,9 +2399,9 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                         <td><span className="tag">{m.services.length} hizmet</span></td>
                         <td>{m.isApproved ? <span className="status s-approved"><CheckCircle size={10}/>Onaylı</span> : <span className="status s-pending"><Clock size={10}/>Bekliyor</span>}</td>
                         <td><div style={{ display: "flex", gap: ".375rem" }}>
-                          <button className="btn btn-ghost btn-xs" onClick={() => { setSvcMaster(svcMaster === m.id ? null : m.id); setEditMaster(null); }}><Package size={11}/></button>
-                          <button className="btn btn-ghost btn-xs" onClick={() => { setEditMaster(editMaster === m.id ? null : m.id); setSvcMaster(null); startEdit(m); }}><Edit3 size={11}/></button>
-                          <button className="btn btn-danger btn-xs" onClick={() => deleteMaster(m.id)}><Trash2 size={11}/></button>
+                          <button className={`btn btn-xs ${svcMaster === m.id ? "btn-primary" : "btn-ghost"}`} title="Hizmetleri yönet" onClick={() => { setSvcMaster(svcMaster === m.id ? null : m.id); setEditMaster(null); }}><Package size={11}/></button>
+                          <button className={`btn btn-xs ${editMaster === m.id ? "btn-primary" : "btn-ghost"}`} title="Bilgileri düzenle" onClick={() => { setEditMaster(editMaster === m.id ? null : m.id); setSvcMaster(null); startEdit(m); }}><Edit3 size={11}/></button>
+                          <button className="btn btn-danger btn-xs" title="Ustayı sil" onClick={() => deleteMaster(m.id)}><Trash2 size={11}/></button>
                         </div></td>
                       </tr>
                       {editMaster === m.id && (
@@ -2414,8 +2425,11 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
                       )}
                       {svcMaster === m.id && (
                         <tr><td colSpan={7} style={{ padding: 0 }}>
-                          <div style={{ background: "var(--bg3)", padding: "1rem", borderBottom: "1px solid var(--gb)" }}>
-                            <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem", display: "flex", alignItems: "center", gap: ".5rem" }}><Package size={13}/>{m.name} — Hizmetler</div>
+                          <div data-svc-panel={m.id} style={{ background: "var(--bg3)", padding: "1rem", borderBottom: "1px solid var(--gb)", borderLeft: "3px solid var(--bl)" }}>
+                            <div style={{ fontWeight: 700, fontSize: ".875rem", marginBottom: ".75rem", display: "flex", alignItems: "center", gap: ".5rem", justifyContent: "space-between" }}>
+                              <span style={{ display: "flex", alignItems: "center", gap: ".5rem" }}><Package size={13}/>{m.name} — Hizmetler ({m.services.length})</span>
+                              <button className="btn btn-ghost btn-xs" onClick={() => setSvcMaster(null)}><X size={11}/>Kapat</button>
+                            </div>
                             {m.services.length === 0 ? <div style={{ color: "var(--t3)", fontSize: ".8125rem", marginBottom: ".75rem" }}>Henüz hizmet yok.</div> : m.services.map(s => (
                               <div key={s.id} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: ".375rem 0", borderBottom: "1px solid var(--gb)", fontSize: ".8125rem" }}>
                                 <span>{s.name} <span style={{ color: "var(--t3)" }}>· {s.duration}</span></span>
