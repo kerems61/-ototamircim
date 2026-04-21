@@ -396,9 +396,9 @@ const CSS = `
   .btn-icon.sm{width:30px;height:30px;border-radius:6px;}
 
   /* ── LAYOUT ── */
-  .page{padding-top:var(--nav-h);min-height:100dvh;padding-bottom:var(--mob-nav);}
+  .page{padding-top:var(--nav-h);min-height:100dvh;padding-bottom:var(--mob-nav);overflow-x:hidden;max-width:100vw;}
   @media(min-width:768px){.page{padding-bottom:0;}}
-  .dash{display:flex;min-height:calc(100dvh - var(--nav-h));}
+  .dash{display:flex;min-height:calc(100dvh - var(--nav-h));overflow-x:hidden;max-width:100vw;}
 
   /* ── SIDEBAR (masaüstü) ── */
   .sidebar{
@@ -431,7 +431,7 @@ const CSS = `
   .mob-nav-dot{position:absolute;top:.375rem;right:.875rem;width:6px;height:6px;border-radius:50%;background:var(--bl);}
 
   /* ── İÇERİK ── */
-  .content{flex:1;padding:1.5rem;overflow-y:auto;max-width:100%;}
+  .content{flex:1;padding:1.5rem;overflow-y:auto;overflow-x:hidden;max-width:100%;min-width:0;}
   @media(min-width:768px){.content{padding:2.25rem 2.5rem;}}
   .page-header{margin-bottom:1.75rem;}
   .page-title{font-size:clamp(1.25rem,4vw,1.75rem);font-weight:800;letter-spacing:-.03em;}
@@ -2239,6 +2239,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 }) {
   type T = "dashboard" | "masters" | "addMaster" | "appointments" | "users";
   const [tab, setTab] = useState<T>("dashboard");
+  const [showMasterPicker, setShowMasterPicker] = useState(false);
   const [fN, setFN] = useState(""); const [fE, setFE] = useState(""); const [fPh, setFPh] = useState(""); const [fPw, setFPw] = useState(""); const [fSp, setFSp] = useState(""); const [fDist, setFDist] = useState("Çankaya"); const [fBio, setFBio] = useState(""); const [fTel, setFTel] = useState(""); const [fCat, setFCat] = useState<MasterCategory>("tamir");
   const [selAppt, setSelAppt] = useState<Appointment | null>(null);
   const [editMaster, setEditMaster] = useState<string | null>(null);
@@ -2321,7 +2322,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
           <div style={{ marginBottom: "1rem" }}>
             <div style={{ fontSize: ".6875rem", fontWeight: 700, color: "var(--t3)", letterSpacing: ".08em", textTransform: "uppercase", marginBottom: ".5rem" }}>Görünüm Önizle</div>
             <button className="btn btn-ghost btn-sm" style={{ width: "100%", marginBottom: ".375rem", justifyContent: "flex-start", gap: ".5rem" }} onClick={() => onPreview("customer")}><User size={13}/>Müşteri Görünümü</button>
-            <button className="btn btn-ghost btn-sm" style={{ width: "100%", justifyContent: "flex-start", gap: ".5rem" }} onClick={() => onPreview("master")}><Wrench size={13}/>Usta Görünümü</button>
+            <button className="btn btn-ghost btn-sm" style={{ width: "100%", justifyContent: "flex-start", gap: ".5rem" }} onClick={() => setShowMasterPicker(true)}><Wrench size={13}/>Usta Paneline Gir</button>
           </div>
           <div className="divider"/>
           <div className="sidebar-section">Yönetici</div>
@@ -2332,7 +2333,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
           {/* Mobil önizleme butonları (tablet/mobil) */}
           <div className="admin-mob-preview">
             <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => onPreview("customer")}><User size={13}/>Müşteri Önizle</button>
-            <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => onPreview("master")}><Wrench size={13}/>Usta Önizle</button>
+            <button className="btn btn-ghost btn-sm" style={{ flex: 1 }} onClick={() => setShowMasterPicker(true)}><Wrench size={13}/>Usta Paneli</button>
           </div>
           {/* DASHBOARD */}
           {tab === "dashboard" && (<>
@@ -2617,6 +2618,41 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
       <nav className="mob-nav">
         {navItems.slice(0, 5).map(it => (<button key={it.id} className={`mob-nav-item ${tab === it.id ? "active" : ""}`} onClick={() => setTab(it.id)}>{it.icon}<span style={{ fontSize: ".5rem" }}>{it.label}</span>{it.badge ? <div className="mob-nav-dot"/> : null}</button>))}
       </nav>
+
+      {/* USTA SEÇİCİ — admin istediği ustanın paneline girsin */}
+      {showMasterPicker && (
+        <div className="overlay" onClick={() => setShowMasterPicker(false)}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
+            <div className="modal-head">
+              <h3><Wrench size={16} style={{ marginRight: ".375rem", verticalAlign: "middle" }}/>Hangi Ustanın Paneline Girmek İstiyorsun?</h3>
+              <button className="close-btn" onClick={() => setShowMasterPicker(false)}><X size={14}/></button>
+            </div>
+            <div className="modal-body">
+              {masters.length === 0 ? (
+                <div className="empty-state"><Wrench size={32}/><h3>Henüz usta yok</h3><p>Önce "Usta Ekle" sekmesinden bir usta ekleyin.</p></div>
+              ) : (
+                <div style={{ display: "flex", flexDirection: "column", gap: ".5rem" }}>
+                  {masters.map(m => (
+                    <button
+                      key={m.id}
+                      className="btn btn-ghost"
+                      style={{ width: "100%", justifyContent: "flex-start", padding: ".75rem 1rem", gap: ".75rem", height: "auto" }}
+                      onClick={() => { setShowMasterPicker(false); onPreview("master", m.id); }}
+                    >
+                      <div className="avatar av-sm">{m.avatar}</div>
+                      <div style={{ flex: 1, textAlign: "left", minWidth: 0 }}>
+                        <div style={{ fontWeight: 700, fontSize: ".9rem" }}>{m.name}</div>
+                        <div style={{ fontSize: ".75rem", color: "var(--t3)" }}>{m.specialty} · {m.district} · {m.services.length} hizmet</div>
+                      </div>
+                      {m.isApproved ? <span className="status s-approved" style={{ fontSize: ".625rem" }}><CheckCircle size={9}/>Onaylı</span> : <span className="status s-pending" style={{ fontSize: ".625rem" }}><Clock size={9}/>Bekliyor</span>}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
