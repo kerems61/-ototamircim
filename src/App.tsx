@@ -548,11 +548,12 @@ const CSS = `
   .deco-stat-l{font-size:.75rem;color:var(--t3);margin-top:.2rem;text-align:center;}
 
   /* ── USTA KARTLARI ── */
-  .masters-grid{display:grid;grid-template-columns:1fr;gap:1rem;}
-  @media(min-width:480px){.masters-grid{grid-template-columns:repeat(2,1fr);}}
-  @media(min-width:900px){.masters-grid{grid-template-columns:repeat(3,1fr);}}
-  .master-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;cursor:pointer;transition:border-color .18s,box-shadow .18s,transform .18s;position:relative;}
-  .master-card:hover{border-color:rgba(37,99,235,.4);transform:translateY(-2px);box-shadow:0 6px 28px rgba(0,0,0,.3);}
+  .masters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;width:100%;max-width:100%;}
+  .master-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;cursor:pointer;transition:border-color .25s,box-shadow .25s,transform .25s;position:relative;min-width:0;overflow:hidden;}
+  .master-card::after{content:'';position:absolute;inset:0;border-radius:var(--r16);pointer-events:none;background:linear-gradient(135deg,rgba(37,99,235,0) 0%,rgba(79,70,229,0) 100%);transition:background .25s;}
+  .master-card:hover{border-color:rgba(79,70,229,.5);transform:translateY(-3px);box-shadow:0 10px 36px rgba(79,70,229,.18);}
+  .master-card:hover::after{background:linear-gradient(135deg,rgba(37,99,235,.04) 0%,rgba(109,40,217,.06) 100%);}
+  .master-card > *{position:relative;z-index:1;}
   .avatar{border-radius:var(--r12);background:linear-gradient(135deg,var(--bl),var(--ind));display:flex;align-items:center;justify-content:center;font-weight:800;color:#fff;flex-shrink:0;}
   .av-lg{width:52px;height:52px;font-size:1rem;}
   .av-md{width:44px;height:44px;font-size:.875rem;}
@@ -746,7 +747,7 @@ const CSS = `
     .stat-grid{grid-template-columns:1fr 1fr;}
     table{font-size:.75rem;}
     table th,table td{padding:.375rem .5rem;}
-    .masters-grid{grid-template-columns:1fr;}
+    /* masters-grid already responsive via auto-fill */
     .btn{font-size:.8125rem;}
     .modal{border-radius:16px 16px 0 0;}
     .sidebar-section,.s-item{font-size:.8125rem;}
@@ -1744,8 +1745,8 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                               <div style={{ fontWeight: 700, fontSize: ".9375rem" }} className="ellipsis">{m.name}</div>
                               {live && <span className="live-badge"><span className="live-dot"/>Şimdi Müsait</span>}
                             </div>
-                            <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{m.specialty}</div>
-                            <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem" }}><MapPin size={10}/>{m.district}</div>
+                            <div className="ellipsis" style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{m.specialty}</div>
+                            <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem", minWidth: 0 }}><MapPin size={10} style={{ flexShrink: 0 }}/><span className="ellipsis">{m.district}</span></div>
                             <div style={{ marginTop: ".375rem" }}>
                               <span className={`cat-badge cat-${m.category || "tamir"}`}>
                                 {(m.category || "tamir") === "tamir" ? <><Wrench size={10}/>Tamir & Bakım</> : <>💧 Yıkama</>}
