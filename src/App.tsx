@@ -1,6 +1,6 @@
 /**
  * ╔══════════════════════════════════════════════════════════════════╗
- * ║         OtoTamirciOnline.com  —  v4.0                           ║
+ * ║         OtoTamircimOnline.com  —  v4.0                           ║
  * ║         "Yakın ve Tanıdık Usta Bulma Platformu"                  ║
  * ╠══════════════════════════════════════════════════════════════════╣
  * ║  YENİLİKLER v4:                                                  ║
@@ -694,12 +694,18 @@ const CSS = `
   .vt-btn.active{background:linear-gradient(135deg,var(--bl),var(--ind));color:#fff;}
 
   /* ── FOOTER ── */
-  .footer{background:var(--bg2);border-top:1px solid var(--gb);padding:2.5rem 1.5rem 1.5rem;}
-  .footer-grid{display:grid;grid-template-columns:1fr;gap:2rem;max-width:1100px;margin:0 auto 2rem;}
-  @media(min-width:640px){.footer-grid{grid-template-columns:2fr 1fr 1.5fr;}}
-  .footer-logo{font-weight:800;font-size:1.125rem;letter-spacing:-.03em;margin-bottom:.5rem;}
-  .footer-desc{font-size:.875rem;color:var(--t2);line-height:1.65;max-width:240px;}
-  .footer-h{font-size:.75rem;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--t1);margin-bottom:.875rem;}
+  .footer{background:var(--bg2);border-top:1px solid var(--gb);padding:2.75rem 1.5rem 1.5rem;}
+  .footer-grid{display:grid;grid-template-columns:1fr;gap:2rem;max-width:1100px;margin:0 auto 2rem;text-align:center;}
+  @media(min-width:768px){.footer-grid{grid-template-columns:1.5fr 1fr 1.25fr;gap:3rem;text-align:left;}}
+  .footer-brand{display:flex;flex-direction:column;align-items:center;}
+  @media(min-width:768px){.footer-brand{align-items:flex-start;}}
+  .footer-brand-row{display:flex;align-items:center;gap:.625rem;margin-bottom:.625rem;}
+  .footer-logo{font-weight:800;font-size:1.125rem;letter-spacing:-.03em;}
+  .footer-domain{font-size:.75rem;color:var(--t3);letter-spacing:.04em;margin-bottom:.875rem;}
+  .footer-desc{font-size:.875rem;color:var(--t2);line-height:1.65;max-width:280px;}
+  .footer-col{display:flex;flex-direction:column;align-items:center;}
+  @media(min-width:768px){.footer-col{align-items:flex-start;}}
+  .footer-h{font-size:.75rem;font-weight:800;letter-spacing:.1em;text-transform:uppercase;color:var(--t1);margin-bottom:.875rem;}
   .footer-link{display:flex;align-items:center;gap:.5rem;font-size:.875rem;color:var(--t2);margin:0 0 .5rem;line-height:1.4;padding:0;text-align:left;}
   .footer-link svg{flex-shrink:0;opacity:.75;}
   .footer-link-btn{cursor:pointer;transition:color .15s;background:none;border:none;font:inherit;color:inherit;width:auto;-webkit-appearance:none;appearance:none;}
@@ -1051,8 +1057,8 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
       await w.emailjs.send(cfg.serviceId, cfg.templateId, {
         to_email: email,
         code,
-        app_name: "OtoTamirciOnline",
-        from_name: "OtoTamirciOnline",
+        app_name: "OtoTamircimOnline",
+        from_name: "OtoTamircimOnline",
       }, cfg.publicKey);
       return { ok: true };
     } catch (err: unknown) {
@@ -1119,7 +1125,7 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
       )}
       {/* Mobil üst başlık */}
       <div className="auth-mob-top">
-        <div style={{ fontWeight: 800, fontSize: "1.375rem", letterSpacing: "-.03em" }}><span className="g-text">OtoTamirci</span>Online</div>
+        <div style={{ fontWeight: 800, fontSize: "1.375rem", letterSpacing: "-.03em" }}><span className="g-text">OtoTamircim</span>Online</div>
         <div style={{ fontSize: ".8125rem", color: "var(--t3)", marginTop: ".25rem" }}>Yakın ve Tanıdık Usta Bulma Platformu</div>
         <div style={{ display: "flex", gap: ".75rem", marginTop: ".625rem", flexWrap: "wrap" }}>
           {["Güvenilir usta","Şeffaf fiyat","Admin onaylı"].map(f => <span key={f} style={{ fontSize: ".75rem", background: "rgba(37,99,235,.12)", border: "1px solid rgba(37,99,235,.25)", borderRadius: 99, padding: ".2rem .625rem", color: "#60a5fa" }}>{f}</span>)}
@@ -1131,7 +1137,7 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
         <div className="gear" style={{ width: 80, height: 80, top: "10%", left: "6%", animationDuration: "28s" }}/>
         <div className="gear" style={{ width: 60, height: 60, bottom: "12%", right: "8%", animationDuration: "22s", animationDirection: "reverse" }}/>
         <div className="deco-content">
-          <div className="deco-logo"><span className="g-text">OtoTamirci</span>Online</div>
+          <div className="deco-logo"><span className="g-text">OtoTamircim</span>Online</div>
           <div className="deco-domain">ototamircimonline.com</div>
           <CarHero/>
           <h2 className="deco-h">Yakın ve Tanıdık<br/>Usta Bulma Platformu</h2>
@@ -1145,7 +1151,7 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
       {/* Sağ form */}
       <div className="auth-right">
         <div className="auth-card">
-          <div className="auth-logo"><span className="g-text">OtoTamirci</span>Online</div>
+          <div className="auth-logo"><span className="g-text">OtoTamircim</span>Online</div>
 
           {/* GİRİŞ */}
           {view === "login" && (<>
@@ -2319,7 +2325,7 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
           </div>
           {/* DASHBOARD */}
           {tab === "dashboard" && (<>
-            <div className="page-header"><div className="page-title">Dashboard</div><div className="page-sub">OtoTamirciOnline.com yönetim paneli</div></div>
+            <div className="page-header"><div className="page-title">Dashboard</div><div className="page-sub">OtoTamircimOnline.com yönetim paneli</div></div>
             <div className="stat-grid">
               {[{ v: approved.length, l: "Onaylı Usta", c: "var(--ok)" }, { v: pending.length, l: "Onay Bekleyen", c: "var(--warn)" }, { v: appointments.length, l: "Toplam Randevu", c: "#60a5fa" }, { v: appointments.filter(a => a.status === "completed").length, l: "Tamamlanan", c: "var(--ind)" }].map(s => (
                 <div key={s.l} className="stat-card"><div className="stat-val" style={{ color: s.c }}>{s.v}</div><div className="stat-label">{s.l}</div></div>
@@ -2769,12 +2775,15 @@ function Footer() {
       )}
       <footer className="footer">
         <div className="footer-grid">
-          <div>
-            <div className="footer-logo"><span className="g-text">OtoTamirci</span>Online</div>
-            <div style={{ fontSize: ".75rem", color: "var(--t3)", marginBottom: ".75rem", letterSpacing: ".06em" }}>ototamircimonline.com</div>
+          <div className="footer-brand">
+            <div className="footer-brand-row">
+              <BrandLogo size={36}/>
+              <div className="footer-logo"><span className="g-text">OtoTamircim</span>Online</div>
+            </div>
+            <div className="footer-domain">ototamircimonline.com</div>
             <p className="footer-desc">Ankara'nın güvenilir usta platformu. Yakın ve tanıdık usta, şeffaf fiyat, kolay randevu.</p>
           </div>
-          <div>
+          <div className="footer-col">
             <div className="footer-h">Platform</div>
             {links.map(l => (
               <button key={l.key} type="button" className="footer-link footer-link-btn" onClick={(e) => { setModal(l.key); e.currentTarget.blur(); }}>
@@ -2782,15 +2791,15 @@ function Footer() {
               </button>
             ))}
           </div>
-          <div>
+          <div className="footer-col">
             <div className="footer-h">İletişim</div>
-            <a href={`tel:${CONTACT_PHONE.replace(/\s|\(|\)/g, "")}`} className="footer-link" style={{ textDecoration: "none", cursor: "pointer" }}><Phone size={14}/>{CONTACT_PHONE}</a>
-            <a href={`mailto:${CONTACT_EMAIL}`} className="footer-link" style={{ textDecoration: "none", cursor: "pointer" }}><Mail size={14}/>{CONTACT_EMAIL}</a>
+            <a href={`tel:${CONTACT_PHONE.replace(/\s|\(|\)/g, "")}`} className="footer-link" style={{ textDecoration: "none" }}><Phone size={14}/>{CONTACT_PHONE}</a>
+            <a href={`mailto:${CONTACT_EMAIL}`} className="footer-link" style={{ textDecoration: "none" }}><Mail size={14}/>{CONTACT_EMAIL}</a>
             <div className="footer-link"><MapPin size={14}/>{CONTACT_ADDRESS}</div>
           </div>
         </div>
         <div className="footer-bottom">
-          <span>© 2025 OtoTamirciOnline.com — Tüm hakları saklıdır.</span>
+          <span>© 2025 OtoTamircimOnline.com — Tüm hakları saklıdır.</span>
           <div style={{ display: "flex", alignItems: "center", gap: ".5rem" }}><Shield size={13} style={{ color: "var(--bl)" }}/>SSL Güvenli</div>
         </div>
       </footer>
@@ -2897,8 +2906,8 @@ export default function App() {
         <style>{CSS}</style>
         <nav className="topnav">
           <div className="nav-logo">
-            <div className="nav-logo-dot"/>
-            <span>OtoTamirci<span className="nav-logo-text">Online</span></span>
+            <BrandLogo size={28}/>
+            <span>OtoTamircim<span className="nav-logo-text">Online</span></span>
           </div>
           <button className="about-btn nav-hide-mob" onClick={() => setShowAbout(true)}>Hakkımızda</button>
           <div className="nav-spacer"/>
@@ -2918,11 +2927,11 @@ export default function App() {
               <div className="modal-body">
                 <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
                   <CarHero/>
-                  <div style={{ fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-.02em", marginTop: ".5rem" }}><span className="g-text">OtoTamirci</span>Online</div>
+                  <div style={{ fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-.02em", marginTop: ".5rem" }}><span className="g-text">OtoTamircim</span>Online</div>
                   <div style={{ fontSize: ".8125rem", color: "var(--t3)", marginTop: ".25rem" }}>ototamircimonline.com</div>
                 </div>
                 <p style={{ color: "var(--t2)", lineHeight: 1.8, fontSize: ".9rem" }}>
-                  OtoTamirciOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ustalarla buluşturan dijital platformdur.
+                  OtoTamircimOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ustalarla buluşturan dijital platformdur.
                 </p>
               </div>
             </div>
@@ -3015,11 +3024,11 @@ export default function App() {
             <div className="modal-body">
               <div style={{ textAlign: "center", marginBottom: "1.5rem" }}>
                 <CarHero/>
-                <div style={{ fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-.02em", marginTop: ".5rem" }}><span className="g-text">OtoTamirci</span>Online</div>
+                <div style={{ fontWeight: 800, fontSize: "1.25rem", letterSpacing: "-.02em", marginTop: ".5rem" }}><span className="g-text">OtoTamircim</span>Online</div>
                 <div style={{ fontSize: ".8125rem", color: "var(--t3)", marginTop: ".25rem" }}>ototamircimonline.com</div>
               </div>
               <p style={{ color: "var(--t2)", lineHeight: 1.8, fontSize: ".9rem", marginBottom: "1rem" }}>
-                OtoTamirciOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ve referanslı ustalarla buluşturan bir dijital platformdur.
+                OtoTamircimOnline.com, Ankara'da araç sahiplerini güvenilir, onaylı ve referanslı ustalarla buluşturan bir dijital platformdur.
                 Amacımız; şeffaf fiyatlandırma, güvenilir ustalar ve kolay randevu sistemiyle hem müşterilere hem de ustalara en iyi deneyimi sunmaktır.
               </p>
               <div style={{ display: "flex", flexDirection: "column", gap: ".625rem" }}>
@@ -3047,8 +3056,8 @@ export default function App() {
       {/* NAV */}
       <nav className="topnav">
         <div className="nav-logo">
-          <div className="nav-logo-dot"/>
-          <span>OtoTamirci<span className="nav-logo-text">Online</span></span>
+          <BrandLogo size={28}/>
+          <span>OtoTamircim<span className="nav-logo-text">Online</span></span>
         </div>
         <button className="about-btn nav-hide-mob" onClick={() => setShowAbout(true)}>Hakkımızda</button>
         <div className="nav-spacer"/>

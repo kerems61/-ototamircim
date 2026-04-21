@@ -14,11 +14,11 @@ import App from './App.tsx'
  *  2. Email Services → Add New Service → Gmail → ototamircim134@gmail.com
  *     hesabıyla OAuth izni ver. Oluşan Service ID'yi kopyala.
  *  3. Email Templates → Create New Template:
- *       Subject: OtoTamirciOnline — Doğrulama Kodu
+ *       Subject: OtoTamircimOnline — Doğrulama Kodu
  *       To email: {{to_email}}
  *       Content:
  *         Merhaba,
- *         OtoTamirciOnline kayıt doğrulama kodunuz: {{code}}
+ *         OtoTamircimOnline kayıt doğrulama kodunuz: {{code}}
  *         Kod 10 dakika geçerlidir. Siz talep etmediyseniz dikkate almayın.
  *     Template ID'yi kopyala.
  *  4. Account → General → Public Key'i kopyala.
