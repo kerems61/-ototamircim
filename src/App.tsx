@@ -398,7 +398,12 @@ const CSS = `
   /* ── LAYOUT ── */
   .page{padding-top:var(--nav-h);min-height:100dvh;padding-bottom:var(--mob-nav);overflow-x:hidden;max-width:100vw;}
   @media(min-width:768px){.page{padding-bottom:0;}}
-  .dash{display:flex;min-height:calc(100dvh - var(--nav-h));overflow-x:hidden;max-width:100vw;}
+  .dash{display:flex;min-height:calc(100dvh - var(--nav-h));overflow-x:hidden;max-width:100vw;position:relative;}
+  /* Sidebar arkaplanı sayfanın tam yüksekliğine iner */
+  @media(min-width:768px){
+    .dash::before{content:'';position:absolute;left:0;top:0;bottom:0;width:230px;background:var(--bg2);border-right:1px solid var(--gb);z-index:0;pointer-events:none;}
+  }
+  .sidebar,.content{position:relative;z-index:1;}
 
   /* ── SIDEBAR (masaüstü) ── */
   .sidebar{
@@ -480,8 +485,8 @@ const CSS = `
   .modal-head h3{font-size:1rem;font-weight:700;}
   .modal-body{padding:1.375rem;overflow-y:auto;flex:1;}
   .modal-foot{padding:.875rem 1.375rem;border-top:1px solid var(--gb);display:flex;gap:.625rem;justify-content:flex-end;flex-shrink:0;}
-  .close-btn{background:var(--g);border:1px solid var(--gb);border-radius:var(--r8);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:var(--t2);transition:all .15s;flex-shrink:0;}
-  .close-btn:hover{color:var(--t1);background:var(--gh);}
+  .close-btn{background:rgba(239,68,68,.1);border:1px solid rgba(239,68,68,.3);border-radius:var(--r8);width:32px;height:32px;display:flex;align-items:center;justify-content:center;cursor:pointer;color:#f87171;transition:all .15s;flex-shrink:0;}
+  .close-btn:hover{background:rgba(239,68,68,.2);border-color:rgba(239,68,68,.5);color:#fca5a5;transform:scale(1.05);}
 
   /* ── UYARI ── */
   .alert{display:flex;align-items:flex-start;gap:.625rem;padding:.75rem 1rem;border-radius:var(--r12);font-size:.875rem;line-height:1.55;}
@@ -1688,7 +1693,13 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
           {tab === "find" && (<>
             <div className="page-header">
               <div style={{ display: "flex", justifyContent: "space-between", alignItems: "flex-start", flexWrap: "wrap", gap: ".75rem" }}>
-                <div><div className="page-title">Usta Bul</div><div className="page-sub">Onaylı, referanslı Ankara ustalarını keşfedin</div></div>
+                <div style={{ display: "flex", alignItems: "center", gap: ".875rem" }}>
+                  <BrandLogo size={44}/>
+                  <div>
+                    <div className="page-title" style={{ background: "linear-gradient(135deg, var(--t1) 0%, var(--bl) 100%)", WebkitBackgroundClip: "text", WebkitTextFillColor: "transparent", backgroundClip: "text" }}>Usta Bul</div>
+                    <div className="page-sub">Onaylı, referanslı Ankara ustalarını keşfedin</div>
+                  </div>
+                </div>
                 <div style={{ display: "flex", gap: ".5rem", flexWrap: "wrap" }}>
                   <button className="btn btn-ghost btn-sm" onClick={getLoc} disabled={locLoading}><Navigation size={13}/>{locLoading ? "Alınıyor..." : "En Yakın"}</button>
                   <div className="view-toggle"><button className={`vt-btn ${view === "list" ? "active" : ""}`} onClick={() => setView("list")}><List size={13}/>Liste</button><button className={`vt-btn ${view === "map" ? "active" : ""}`} onClick={() => setView("map")}><Map size={13}/>Harita</button></div>
@@ -1738,16 +1749,16 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                     return (
                       <div key={m.id} className="master-card" onClick={() => setSel(m)}>
                         {distKm != null && <div className="dist-badge"><Navigation size={10}/>{distKm.toFixed(1)} km</div>}
-                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem" }}>
-                          <div className="avatar av-md">{m.avatar}</div>
-                          <div style={{ minWidth: 0, flex: 1 }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: ".4rem", flexWrap: "wrap" }}>
-                              <div style={{ fontWeight: 700, fontSize: ".9375rem" }} className="ellipsis">{m.name}</div>
+                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", alignItems: "flex-start" }}>
+                          <div className="avatar av-md" style={{ flexShrink: 0 }}>{m.avatar}</div>
+                          <div style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
+                            <div style={{ display: "flex", alignItems: "center", gap: ".4rem", flexWrap: "wrap", marginBottom: ".125rem" }}>
+                              <div style={{ fontWeight: 700, fontSize: ".9375rem", textAlign: "left" }} className="ellipsis">{m.name}</div>
                               {live && <span className="live-badge"><span className="live-dot"/>Şimdi Müsait</span>}
                             </div>
-                            <div className="ellipsis" style={{ fontSize: ".8125rem", color: "var(--t2)" }}>{m.specialty}</div>
-                            <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem", minWidth: 0 }}><MapPin size={10} style={{ flexShrink: 0 }}/><span className="ellipsis">{m.district}</span></div>
-                            <div style={{ marginTop: ".375rem" }}>
+                            <div className="ellipsis" style={{ fontSize: ".8125rem", color: "var(--t2)", textAlign: "left", marginBottom: ".125rem" }}>{m.specialty || "—"}</div>
+                            <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem", minWidth: 0, textAlign: "left" }}><MapPin size={10} style={{ flexShrink: 0 }}/><span className="ellipsis">{m.district}</span></div>
+                            <div style={{ marginTop: ".4rem", textAlign: "left" }}>
                               <span className={`cat-badge cat-${m.category || "tamir"}`}>
                                 {(m.category || "tamir") === "tamir" ? <><Wrench size={10}/>Tamir & Bakım</> : <>💧 Yıkama</>}
                               </span>
