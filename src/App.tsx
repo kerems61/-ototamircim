@@ -414,11 +414,13 @@ const CSS = `
     overflow-y:auto;display:none;
   }
   @media(min-width:768px){.sidebar{display:flex;flex-direction:column;}}
-  .sidebar-section{font-size:.6875rem;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--t3);margin:.75rem 0 .375rem .5rem;}
-  .s-item{display:flex;align-items:center;gap:.625rem;padding:.5625rem .75rem;border-radius:var(--r8);font-size:.9rem;color:var(--t2);cursor:pointer;background:none;border:none;font-family:'Outfit',sans-serif;width:100%;text-align:left;transition:all .15s;margin-bottom:2px;font-weight:500;}
-  .s-item:hover{background:var(--g);color:var(--t1);}
-  .s-item.active{background:var(--bl-d);color:#60a5fa;font-weight:600;}
-  .s-item.active svg{opacity:1;}
+  .sidebar-section{font-size:.8125rem;font-weight:800;letter-spacing:.18em;text-transform:uppercase;color:#a78bfa;margin:.875rem 0 .625rem .5rem;display:flex;align-items:center;gap:.5rem;}
+  .sidebar-section::before{content:'';width:14px;height:2px;border-radius:2px;background:linear-gradient(90deg,#60a5fa,#a78bfa);}
+  .s-item{display:flex;align-items:center;gap:.75rem;padding:.75rem .875rem;border-radius:var(--r12);font-size:.95rem;color:var(--t2);cursor:pointer;background:none;border:1px solid transparent;font-family:'Outfit',sans-serif;width:100%;text-align:left;transition:all .18s;margin-bottom:4px;font-weight:600;position:relative;}
+  .s-item:hover{background:var(--g);color:var(--t1);border-color:var(--gb);transform:translateX(2px);}
+  .s-item.active{background:linear-gradient(135deg,rgba(37,99,235,.18),rgba(109,40,217,.12));color:#c4b5fd;font-weight:700;border-color:rgba(129,140,248,.35);box-shadow:0 4px 14px rgba(79,70,229,.18);}
+  .s-item.active svg{opacity:1;color:#a78bfa;}
+  .s-item.active::before{content:'';position:absolute;left:-.875rem;top:50%;transform:translateY(-50%);width:3px;height:24px;border-radius:2px;background:linear-gradient(180deg,#60a5fa,#a78bfa);}
   .s-item svg{opacity:.6;}
   .s-badge{margin-left:auto;background:var(--bl);color:#fff;border-radius:99px;padding:1px 8px;font-size:.6875rem;font-weight:700;}
 
