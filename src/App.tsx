@@ -65,7 +65,7 @@ import {
   AlertCircle, Briefcase, BarChart2, Trash2, Edit3, Eye, EyeOff,
   LogOut, Navigation, Map, List, Phone, Mail, Save, UserPlus,
   Package, Search, ArrowLeft, HelpCircle, KeyRound,
-  ChevronRight, Star, TrendingUp, Wifi, WifiOff
+  ChevronRight, ChevronDown, Star, TrendingUp
 } from "lucide-react";
 
 // ══════════════════════════════════════════════════════════════════
@@ -603,6 +603,41 @@ const CSS = `
   .week-cell.on{background:rgba(16,185,129,.35);border:1px solid rgba(16,185,129,.5);}
   .week-cell.off{background:var(--g);border:1px solid var(--gb);}
   .week-cell.today{box-shadow:inset 0 0 0 1px rgba(37,99,235,.5);}
+
+  /* ── INFO MODAL BİLEŞENLERİ (footer modals) ── */
+  .info-hero{display:flex;flex-direction:column;align-items:center;text-align:center;padding:.5rem 0 1.25rem;border-bottom:1px solid var(--gb);margin-bottom:1.25rem;}
+  .info-hero-logo{width:52px;height:52px;border-radius:14px;background:linear-gradient(135deg,var(--bl),var(--ind),var(--vio));display:flex;align-items:center;justify-content:center;margin-bottom:.625rem;box-shadow:0 8px 24px rgba(79,70,229,.35);}
+  .info-hero-title{font-size:1.125rem;font-weight:800;letter-spacing:-.02em;margin-bottom:.25rem;}
+  .info-hero-sub{font-size:.8125rem;color:var(--t2);line-height:1.5;max-width:340px;}
+
+  .info-steps{display:flex;flex-direction:column;gap:.625rem;}
+  .info-step{display:flex;gap:.875rem;align-items:flex-start;background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);padding:.875rem 1rem;transition:border-color .2s,transform .2s;}
+  .info-step:hover{border-color:rgba(79,70,229,.35);transform:translateY(-1px);}
+  .info-step-num{flex-shrink:0;width:30px;height:30px;border-radius:10px;background:linear-gradient(135deg,var(--bl),var(--ind));color:#fff;font-weight:800;font-size:.875rem;display:flex;align-items:center;justify-content:center;box-shadow:0 3px 10px rgba(79,70,229,.3);}
+  .info-step-body{flex:1;min-width:0;}
+  .info-step-title{font-weight:700;font-size:.9375rem;margin-bottom:.125rem;color:var(--t1);display:flex;align-items:center;gap:.4rem;}
+  .info-step-desc{font-size:.8125rem;color:var(--t2);line-height:1.55;}
+
+  .info-features{display:flex;flex-direction:column;gap:.625rem;}
+  .info-feature{display:flex;gap:.75rem;align-items:flex-start;background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);padding:.875rem 1rem;}
+  .info-feature-icon{flex-shrink:0;width:34px;height:34px;border-radius:10px;display:flex;align-items:center;justify-content:center;background:rgba(16,185,129,.12);border:1px solid rgba(16,185,129,.3);color:var(--ok);}
+  .info-feature-body{flex:1;min-width:0;}
+  .info-feature-title{font-weight:700;font-size:.9375rem;margin-bottom:.125rem;color:var(--t1);}
+  .info-feature-desc{font-size:.8125rem;color:var(--t2);line-height:1.55;}
+
+  .info-faq{display:flex;flex-direction:column;gap:.5rem;}
+  .info-faq-item{background:var(--g);border:1px solid var(--gb);border-radius:var(--r12);overflow:hidden;}
+  .info-faq-q{display:flex;align-items:center;justify-content:space-between;gap:.75rem;padding:.875rem 1rem;cursor:pointer;background:none;border:none;width:100%;font:inherit;color:var(--t1);text-align:left;font-weight:600;font-size:.9rem;-webkit-appearance:none;appearance:none;transition:background .15s;}
+  .info-faq-q:hover{background:rgba(255,255,255,.03);}
+  .info-faq-q svg{flex-shrink:0;transition:transform .2s;color:var(--t3);}
+  .info-faq-q.open svg{transform:rotate(180deg);color:#60a5fa;}
+  .info-faq-a{padding:0 1rem 1rem;font-size:.8125rem;color:var(--t2);line-height:1.65;animation:faqOpen .2s ease;}
+  @keyframes faqOpen{from{opacity:0;transform:translateY(-4px);}to{opacity:1;transform:translateY(0);}}
+
+  .info-cta{display:flex;align-items:center;gap:.75rem;background:linear-gradient(135deg,rgba(37,99,235,.12),rgba(79,70,229,.1));border:1px solid rgba(37,99,235,.3);border-radius:var(--r12);padding:.875rem 1rem;margin-top:1rem;}
+  .info-cta-icon{flex-shrink:0;width:34px;height:34px;border-radius:50%;background:rgba(37,99,235,.2);display:flex;align-items:center;justify-content:center;color:#60a5fa;}
+  .info-cta-text{flex:1;font-size:.8125rem;color:var(--t1);line-height:1.5;}
+  .info-cta-text strong{color:#60a5fa;}
   .leaflet-popup-content-wrapper{background:var(--bg3)!important;border:1px solid var(--gb)!important;border-radius:var(--r12)!important;box-shadow:var(--shadow-lg)!important;}
   .leaflet-popup-tip{background:var(--bg3)!important;}
   .leaflet-popup-content{color:var(--t1)!important;font-family:'Outfit',sans-serif!important;margin:10px 14px!important;font-size:13px!important;}
@@ -2570,70 +2605,134 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 // ══════════════════════════════════════════════════════════════════
 type FooterModal = "nasil" | "ustaol" | "guvenlik" | "sss" | null;
 
-const FOOTER_CONTENT: Record<Exclude<FooterModal, null>, { title: string; body: React.ReactNode }> = {
+// Küçük marka logosu — modal başlıklarında, auth'ta kullanılabilir
+function BrandLogo({ size = 44 }: { size?: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 64 64" aria-hidden>
+      <defs>
+        <linearGradient id="bl-bg" x1="0" y1="0" x2="1" y2="1">
+          <stop offset="0%" stopColor="#2563eb"/><stop offset="55%" stopColor="#4338ca"/><stop offset="100%" stopColor="#6d28d9"/>
+        </linearGradient>
+        <linearGradient id="bl-car" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor="#ffffff"/><stop offset="100%" stopColor="#e0e7ff"/>
+        </linearGradient>
+      </defs>
+      <rect x="0" y="0" width="64" height="64" rx="14" fill="url(#bl-bg)"/>
+      <path d="M10 40 L10 46 Q10 49 13 49 L51 49 Q54 49 54 46 L54 40 Z" fill="url(#bl-car)"/>
+      <path d="M20 40 L24 30 Q25.5 27 28 27 L36 27 Q38.5 27 40 30 L44 40 Z" fill="url(#bl-car)"/>
+      <path d="M21 39 L24.5 31 Q25.5 29 27 29 L31 29 L31 39 Z" fill="rgba(37,99,235,.45)"/>
+      <path d="M33 29 L36.5 29 Q38 29 39 31 L42.5 39 L33 39 Z" fill="rgba(37,99,235,.45)"/>
+      <g transform="translate(38,6) rotate(35)">
+        <path d="M0 6 A6 6 0 1 1 6 12 L6 15 Q6 16 7 16 L16 16 Q17 16 17 17 L17 21 Q17 22 16 22 L7 22 Q6 22 6 23 L6 26 A6 6 0 1 1 0 20 Z" fill="#fbbf24" stroke="#b45309" strokeWidth=".6" opacity=".95"/>
+      </g>
+      <circle cx="19" cy="49" r="5" fill="#0f172a"/><circle cx="19" cy="49" r="2.2" fill="#64748b"/>
+      <circle cx="45" cy="49" r="5" fill="#0f172a"/><circle cx="45" cy="49" r="2.2" fill="#64748b"/>
+    </svg>
+  );
+}
+
+function FAQAccordion() {
+  const [open, setOpen] = React.useState<number | null>(0);
+  const items = [
+    { q: "Hizmet ücretsiz mi?", a: "Evet. Müşteri kaydı, usta arama ve randevu alma tamamen ücretsizdir. Sadece ustanıza hizmet bedelini ödersiniz — platform komisyon almaz." },
+    { q: "Ustayı nasıl değerlendirebilirim?", a: "İş tamamlandıktan sonra 'Görüşler' sekmesinden 1-5 yıldız arası puan ve yorum bırakabilirsiniz. Yorumlarınız diğer müşterilere yol gösterir." },
+    { q: "Randevuyu iptal edebilir miyim?", a: "Usta onayından önce randevunuzu 'Randevular' sekmesinden iptal edebilirsiniz. Onaylanmış randevular için ustanızla doğrudan iletişime geçin." },
+    { q: "Hangi bölgelerde hizmet var?", a: "Şu an Ankara'nın Çankaya, Keçiören, Mamak, Sincan, Etimesgut, Yenimahalle, Altındağ ve Pursaklar ilçelerinde hizmet veriyoruz. Kısa süre içinde diğer illere de genişleyeceğiz." },
+    { q: "Usta olmak için ne gerekiyor?", a: "Meslekten kimlik, referans ve iş tecrübesi belgenizle başvurabilirsiniz. Yönetici onayı sonrası profiliniz aktif olur. İletişim için aşağıdaki maili kullanabilirsiniz." },
+  ];
+  return (
+    <div className="info-faq">
+      {items.map((it, i) => (
+        <div key={it.q} className="info-faq-item">
+          <button type="button" className={`info-faq-q${open === i ? " open" : ""}`} onClick={(e) => { setOpen(open === i ? null : i); e.currentTarget.blur(); }}>
+            <span>{it.q}</span><ChevronDown size={16}/>
+          </button>
+          {open === i && <div className="info-faq-a">{it.a}</div>}
+        </div>
+      ))}
+    </div>
+  );
+}
+
+const FOOTER_CONTENT: Record<Exclude<FooterModal, null>, { title: string; subtitle: string; body: React.ReactNode }> = {
   nasil: {
     title: "Nasıl Çalışır?",
+    subtitle: "5 kolay adımda güvenilir ustanızı bulun ve randevunuzu alın",
     body: (
-      <ol style={{ paddingLeft: "1.25rem", lineHeight: 2, color: "var(--t2)", fontSize: ".9rem" }}>
-        <li><strong style={{ color: "var(--t1)" }}>Kayıt Ol</strong> — Ücretsiz müşteri hesabı oluşturun.</li>
-        <li><strong style={{ color: "var(--t1)" }}>Usta Seç</strong> — Semtinize ve ihtiyacınıza göre onaylı ustalar arasından seçim yapın.</li>
-        <li><strong style={{ color: "var(--t1)" }}>Randevu Al</strong> — Uygun gün ve saati seçin, notunuzu ekleyin.</li>
-        <li><strong style={{ color: "var(--t1)" }}>Onay Bekle</strong> — Usta randevuyu onayladığında size bildirim gelir.</li>
-        <li><strong style={{ color: "var(--t1)" }}>İşinizi Yaptırın</strong> — Ustanız geldiğinde veya yanına gittiğinizde anlaşma tamam.</li>
-      </ol>
-    ),
-  },
-  ustaol: {
-    title: "Usta Ol",
-    body: (
-      <div style={{ color: "var(--t2)", fontSize: ".9rem", lineHeight: 1.8 }}>
-        <p style={{ marginBottom: "1rem" }}>Platformumuza usta olarak katılmak için:</p>
-        <ol style={{ paddingLeft: "1.25rem", lineHeight: 2 }}>
-          <li>Sağ üstteki <strong style={{ color: "var(--t1)" }}>Kayıt Ol</strong> butonuna tıklayın.</li>
-          <li>Bilgilerinizi doldurun ve kaydınızı tamamlayın.</li>
-          <li>Yönetici hesabınızı onayladıktan sonra aktif olursunuz.</li>
-        </ol>
-        <p style={{ marginTop: "1rem", color: "var(--t3)", fontSize: ".8125rem" }}>Onay için iletişim: {CONTACT_EMAIL}</p>
+      <div className="info-steps">
+        {[
+          { title: "Kayıt Ol", desc: "E-posta ve telefonunla ücretsiz hesap oluştur. Üyelik 1 dakika sürer." },
+          { title: "Usta Seç", desc: "Semtine ve ihtiyacına göre onaylı ustalar arasından uygununu seç; fiyat ve yorumları incele." },
+          { title: "Randevu Al", desc: "Uygun gün ve saati belirle, aracına dair notunu ekle; ustaya talebini gönder." },
+          { title: "Onay Bekle", desc: "Usta randevunu onayladığında bildirim alırsın; randevuların panelde takip edilir." },
+          { title: "İşini Yaptır", desc: "Ustanız yerine gelir veya siz gidersiniz. Ödeme yüz yüze, platform dışında yapılır." },
+        ].map((s, i) => (
+          <div key={s.title} className="info-step">
+            <div className="info-step-num">{i + 1}</div>
+            <div className="info-step-body">
+              <div className="info-step-title">{s.title}</div>
+              <div className="info-step-desc">{s.desc}</div>
+            </div>
+          </div>
+        ))}
       </div>
     ),
   },
-  guvenlik: {
-    title: "Güvenlik",
+  ustaol: {
+    title: "Usta Olarak Katıl",
+    subtitle: "Ankara'nın en güvenilir oto tamir platformunda yerini al",
     body: (
-      <div style={{ color: "var(--t2)", fontSize: ".9rem", lineHeight: 1.8 }}>
-        <div style={{ display: "flex", flexDirection: "column", gap: ".75rem" }}>
+      <>
+        <div className="info-steps">
           {[
-            ["Onaylı Ustalar", "Tüm ustalar kimlik ve referans kontrolünden geçer."],
-            ["Şeffaf Fiyat", "Fiyatlar ustanın profilinde açıkça yayınlanır. Sürpriz ücret yoktur."],
-            ["SSL Şifreleme", "Tüm veriler 256-bit SSL ile şifrelenir."],
-            ["Gizlilik", "Kişisel bilgileriniz üçüncü taraflarla paylaşılmaz."],
-          ].map(([title, desc]) => (
-            <div key={title} style={{ display: "flex", gap: ".625rem", alignItems: "flex-start" }}>
-              <CheckCircle size={15} style={{ color: "var(--ok)", marginTop: ".15rem", flexShrink: 0 }}/>
-              <div><strong style={{ color: "var(--t1)" }}>{title}</strong><br/>{desc}</div>
+            { title: "Hesap Oluştur", desc: "Sağ üstteki 'Kayıt Ol' butonundan usta hesabı aç. Ad, e-posta, telefon ve şifre yeterli." },
+            { title: "Profilini Doldur", desc: "Uzmanlık alanın, semt, iş yeri konumu, çalışma saatleri ve fotoğraflarını ekle." },
+            { title: "Hizmetlerini Tanıt", desc: "Verdiğin hizmetlerin adını, süresini ve şeffaf fiyatını paylaş — müşteri ne ödeyeceğini bilsin." },
+            { title: "Onay ve Yayın", desc: "Yönetici doğrulamasının ardından profilin yayınlanır. Müşteri talepleri gelmeye başlar." },
+          ].map((s, i) => (
+            <div key={s.title} className="info-step">
+              <div className="info-step-num">{i + 1}</div>
+              <div className="info-step-body">
+                <div className="info-step-title">{s.title}</div>
+                <div className="info-step-desc">{s.desc}</div>
+              </div>
             </div>
           ))}
         </div>
+        <div className="info-cta">
+          <div className="info-cta-icon"><Mail size={16}/></div>
+          <div className="info-cta-text">Yönetici ile hızlı iletişim için: <strong>{CONTACT_EMAIL}</strong></div>
+        </div>
+      </>
+    ),
+  },
+  guvenlik: {
+    title: "Güvenlik ve Şeffaflık",
+    subtitle: "Platformumuzda güven için uygulanan kurallar",
+    body: (
+      <div className="info-features">
+        {[
+          { title: "Onaylı Ustalar", desc: "Platformdaki her usta kimlik ve referans kontrolünden geçerek yayınlanır." },
+          { title: "Şeffaf Fiyatlandırma", desc: "Fiyatlar ustanın profilinde açıkça gösterilir. Sürpriz ücret veya gizli komisyon yoktur." },
+          { title: "SSL Şifreleme", desc: "Tüm verileriniz 256-bit SSL sertifikasıyla şifrelenir; kimse iletişimi okuyamaz." },
+          { title: "Gizlilik Garantisi", desc: "İletişim bilgileriniz üçüncü taraflarla paylaşılmaz. KVKK'ya tam uyumluyuz." },
+          { title: "Değerlendirme Sistemi", desc: "Gerçek kullanıcı yorumlarıyla hangi ustanın ne kadar güvenilir olduğunu görürsünüz." },
+        ].map((f) => (
+          <div key={f.title} className="info-feature">
+            <div className="info-feature-icon"><Check size={16}/></div>
+            <div className="info-feature-body">
+              <div className="info-feature-title">{f.title}</div>
+              <div className="info-feature-desc">{f.desc}</div>
+            </div>
+          </div>
+        ))}
       </div>
     ),
   },
   sss: {
     title: "Sık Sorulan Sorular",
-    body: (
-      <div style={{ color: "var(--t2)", fontSize: ".875rem", lineHeight: 1.75 }}>
-        {[
-          ["Hizmet ücretsiz mi?", "Müşteri kaydı ve usta arama tamamen ücretsizdir."],
-          ["Ustayı nasıl değerlendirebilirim?", "İş tamamlandıktan sonra puan ve yorum bırakabilirsiniz."],
-          ["Randevuyu iptal edebilir miyim?", "Onaylanmamış randevular iptal edilebilir. Onaylananlar için ustanızla iletişime geçin."],
-          ["Hangi bölgelerde hizmet var?", "Şu an için Ankara ilçelerinde hizmet verilmektedir."],
-        ].map(([q, a]) => (
-          <div key={q as string} style={{ marginBottom: "1rem", paddingBottom: "1rem", borderBottom: "1px solid var(--gb)" }}>
-            <div style={{ fontWeight: 600, color: "var(--t1)", marginBottom: ".25rem" }}>{q}</div>
-            <div>{a}</div>
-          </div>
-        ))}
-      </div>
-    ),
+    subtitle: "Merak ettiğiniz konuları aşağıdaki başlıklardan bulabilirsiniz",
+    body: <FAQAccordion/>,
   },
 };
 
@@ -2652,12 +2751,19 @@ function Footer() {
     <>
       {info && (
         <div className="overlay" onClick={() => setModal(null)}>
-          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 480 }}>
+          <div className="modal" onClick={e => e.stopPropagation()} style={{ maxWidth: 520 }}>
             <div className="modal-head">
-              <h3>{info.title}</h3>
+              <div style={{ fontWeight: 700, fontSize: ".9375rem" }}>{info.title}</div>
               <button className="close-btn" onClick={() => setModal(null)}><X size={16}/></button>
             </div>
-            <div className="modal-body">{info.body}</div>
+            <div className="modal-body">
+              <div className="info-hero">
+                <div className="info-hero-logo"><BrandLogo size={40}/></div>
+                <div className="info-hero-title">{info.title}</div>
+                <div className="info-hero-sub">{info.subtitle}</div>
+              </div>
+              {info.body}
+            </div>
           </div>
         </div>
       )}
