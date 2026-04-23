@@ -595,7 +595,7 @@ const CSS = `
 
   /* ── USTA KARTLARI ── */
   .masters-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:1rem;width:100%;max-width:100%;}
-  .master-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;cursor:pointer;transition:border-color .25s,box-shadow .25s,transform .25s;position:relative;min-width:0;overflow:hidden;}
+  .master-card{background:var(--bg2);border:1px solid var(--gb);border-radius:var(--r16);padding:1.25rem;cursor:pointer;transition:border-color .25s,box-shadow .25s,transform .25s;position:relative;min-width:0;overflow:hidden;display:flex;flex-direction:column;}
   .master-card::after{content:'';position:absolute;inset:0;border-radius:var(--r16);pointer-events:none;background:linear-gradient(135deg,rgba(37,99,235,0) 0%,rgba(79,70,229,0) 100%);transition:background .25s;}
   .master-card:hover{border-color:rgba(79,70,229,.5);transform:translateY(-3px);box-shadow:0 10px 36px rgba(79,70,229,.18);}
   .master-card:hover::after{background:linear-gradient(135deg,rgba(37,99,235,.04) 0%,rgba(109,40,217,.06) 100%);}
@@ -1860,7 +1860,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Award size={12} style={{ color: "var(--ind)" }}/><strong>{m.completedJobs}</strong><span style={{ color: "var(--t2)" }}>iş</span></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Package size={12} style={{ color: "var(--t3)" }}/><strong>{m.services.length}</strong><span style={{ color: "var(--t2)" }}>hizmet</span></div>
                         </div>
-                        <button className="btn btn-primary" style={{ width: "100%", fontSize: ".8125rem" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
+                        <button className="btn btn-primary" style={{ width: "100%", fontSize: ".8125rem", marginTop: "auto" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
                       </div>
                     );
                   })}
