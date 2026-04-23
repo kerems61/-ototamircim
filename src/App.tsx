@@ -1665,6 +1665,12 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
   const openLogin = () => (onOpenAuth || onRequireLogin)?.();
   type T = "find" | "appointments" | "reviews" | "profile";
   const [tab, setTab] = useState<T>("find");
+
+  // Sekme değişince sayfanın en üstüne dön
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.querySelector(".content")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [tab]);
   const [view, setView] = useState<"list" | "map">("list");
   const [district, setDistrict] = useState("Tümü");
   const [q, setQ] = useState("");
@@ -1849,31 +1855,12 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".625rem", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><span style={{ color: "#fbbf24" }}>⭐</span><strong>{m.rating || "Yeni"}</strong></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Award size={12} style={{ color: "var(--ind)" }}/><strong>{m.completedJobs}</strong><span style={{ color: "var(--t2)" }}>iş</span></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Package size={12} style={{ color: "var(--t3)" }}/><strong>{m.services.length}</strong><span style={{ color: "var(--t2)" }}>hizmet</span></div>
                         </div>
-                        {/* Özet müsaitlik — detay için karta tıkla */}
-                        <div style={{ display: "flex", gap: ".5rem", fontSize: ".75rem", marginBottom: ".625rem", flexWrap: "wrap" }}>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: ".25rem", background: todayConfigured && todayFree.length ? "rgba(16,185,129,.1)" : "var(--g)", border: `1px solid ${todayConfigured && todayFree.length ? "rgba(16,185,129,.3)" : "var(--gb)"}`, color: todayConfigured && todayFree.length ? "#34d399" : "var(--t3)", borderRadius: 6, padding: ".2rem .5rem", fontWeight: 600 }}>
-                            <Clock size={10}/>Bugün: {!todayConfigured ? "Kapalı" : `${todayFree.length} boş saat`}
-                          </span>
-                          <span style={{ display: "inline-flex", alignItems: "center", gap: ".25rem", background: tomorrowConfigured && tomorrowFree.length ? "rgba(37,99,235,.1)" : "var(--g)", border: `1px solid ${tomorrowConfigured && tomorrowFree.length ? "rgba(37,99,235,.3)" : "var(--gb)"}`, color: tomorrowConfigured && tomorrowFree.length ? "#60a5fa" : "var(--t3)", borderRadius: 6, padding: ".2rem .5rem", fontWeight: 600 }}>
-                            <Clock size={10}/>Yarın: {!tomorrowConfigured ? "Kapalı" : `${tomorrowFree.length} boş saat`}
-                          </span>
-                        </div>
-                        <div style={{ display: "flex", gap: ".5rem" }}>
-                          <button className="btn btn-primary" style={{ flex: 1, fontSize: ".8125rem" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
-                          <button
-                            className="quick-book-btn"
-                            disabled={todayFree.length === 0 || !m.services.length}
-                            onClick={e => { e.stopPropagation(); quickBook(m); }}
-                            title={todayFree.length ? `Bugün ${todayFree[0]} için hızlı randevu` : "Bugün boş yok"}
-                          >
-                            <Clock size={11}/>Hızlı
-                          </button>
-                        </div>
+                        <button className="btn btn-primary" style={{ width: "100%", fontSize: ".8125rem" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
                       </div>
                     );
                   })}
@@ -2008,8 +1995,13 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
   reviews: Review[]; setReviews: React.Dispatch<React.SetStateAction<Review[]>>;
   toast: (msg: string, type: ToastItem["type"]) => void;
 }) {
-  type T = "profile" | "services" | "appointments" | "reviews";
+  type T = "profile" | "services" | "settings" | "appointments" | "reviews";
   const [tab, setTab] = useState<T>("profile");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.querySelector(".content")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [tab]);
   const myMaster = masters.find(m => m.id === user.masterId || m.userId === user.id);
   const [name, setName] = useState(myMaster?.name ?? ""); const [specialty, setSpecialty] = useState(myMaster?.specialty ?? ""); const [district, setDistrict] = useState(myMaster?.district ?? "Çankaya"); const [bio, setBio] = useState(myMaster?.bio ?? ""); const [phone, setPhone] = useState(myMaster?.phone ?? "");
   const [avDays, setAvDays] = useState<string[]>(myMaster?.availability?.days ?? []);
@@ -2086,6 +2078,7 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
   const navItems = [
     { id: "profile" as T, icon: <User size={20}/>, label: "Profil" },
     { id: "services" as T, icon: <Package size={20}/>, label: "Hizmetler" },
+    { id: "settings" as T, icon: <Clock size={20}/>, label: "Ayarlar" },
     { id: "appointments" as T, icon: <Bell size={20}/>, label: "Randevular", badge: pendingCount },
     { id: "reviews" as T, icon: <Star size={20}/>, label: "Görüşlerim", badge: myReviewsForMaster.length || undefined },
   ];
@@ -2145,24 +2138,45 @@ function MasterPage({ user, masters, setMasters, appointments, setAppointments, 
               <div style={{ display: "flex", justifyContent: "flex-end" }}><button className="btn btn-primary" onClick={saveProfile}><Save size={13}/>Kaydet</button></div>
             </div>
 
-            <div className="card" style={{ marginTop: "1rem" }}>
-              <div className="card-title"><Clock size={14}/>Çalışma Günleri & Saatleri</div>
-              <label className="fl">Müsait Günler</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: ".375rem", marginBottom: "1rem" }}>
+          </>)}
+
+          {tab === "settings" && (<>
+            <div className="page-header">
+              <div className="page-title">Ayarlar</div>
+              <div className="page-sub">Otomatik onay ve çalışma saatlerini buradan yönet</div>
+            </div>
+            <div className="card">
+              <div className="card-title" style={{ display: "flex", alignItems: "center", gap: ".5rem" }}>
+                <span style={{ width: 30, height: 30, borderRadius: "50%", background: "linear-gradient(135deg, #10b981, #059669)", display: "inline-flex", alignItems: "center", justifyContent: "center", color: "#fff" }}><CheckCircle size={16}/></span>
+                Otomatik Onay
+              </div>
+              <div style={{ background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.25)", borderRadius: "var(--r12)", padding: "1rem", fontSize: ".875rem", color: "#a7f3d0", lineHeight: 1.6, marginBottom: "1.25rem" }}>
+                Aşağıda <strong style={{ color: "#fff" }}>seçtiğin gün ve saat aralıklarında</strong> gelen randevu talepleri anında otomatik onaylanır — müşteri beklemez, sen uğraşmazsın.
+                <br/>
+                <span style={{ fontSize: ".8125rem", color: "var(--t3)" }}>Seçmediğin zamanlarda gelen talepler "Bekliyor" olarak kalır; manuel onay vermen gerekir.</span>
+              </div>
+
+              <label className="fl" style={{ fontSize: ".875rem", marginBottom: ".625rem" }}>📅 Otomatik Onay Verilecek Günler</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: ".375rem", marginBottom: "1.25rem" }}>
                 {DAYS.map(d => (
                   <button key={d} onClick={() => toggleDay(d)} className={`btn btn-sm ${avDays.includes(d) ? "btn-primary" : "btn-ghost"}`}>{d}</button>
                 ))}
               </div>
-              <label className="fl">Müsait Saatler</label>
-              <div style={{ display: "flex", flexWrap: "wrap", gap: ".375rem", marginBottom: "1rem" }}>
+
+              <label className="fl" style={{ fontSize: ".875rem", marginBottom: ".625rem" }}>⏰ Otomatik Onay Verilecek Saatler</label>
+              <div style={{ display: "flex", flexWrap: "wrap", gap: ".375rem", marginBottom: "1.25rem" }}>
                 {TIME_SLOTS.map(s => (
                   <button key={s} onClick={() => toggleSlot(s)} className={`btn btn-sm ${avSlots.includes(s) ? "btn-primary" : "btn-ghost"}`}>{s}</button>
                 ))}
               </div>
-              <div style={{ background: "rgba(16,185,129,.08)", border: "1px solid rgba(16,185,129,.2)", borderRadius: 8, padding: ".625rem .875rem", fontSize: ".8125rem", color: "#34d399", marginBottom: ".875rem" }}>
-                Seçili gün ve saatlerdeki randevular otomatik onaylanır.
+
+              <div style={{ display: "flex", gap: ".5rem", justifyContent: "space-between", flexWrap: "wrap" }}>
+                <div style={{ display: "flex", gap: ".375rem", flexWrap: "wrap" }}>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setAvDays(DAYS); setAvSlots(TIME_SLOTS); }}>Tümünü Seç</button>
+                  <button className="btn btn-ghost btn-sm" onClick={() => { setAvDays([]); setAvSlots([]); }}>Temizle</button>
+                </div>
+                <button className="btn btn-primary" onClick={saveProfile}><Save size={13}/>Kaydet</button>
               </div>
-              <div style={{ display: "flex", justifyContent: "flex-end" }}><button className="btn btn-primary" onClick={saveProfile}><Save size={13}/>Kaydet</button></div>
             </div>
           </>)}
 
@@ -2335,6 +2349,11 @@ function AdminPage({ masters, setMasters, users, setUsers, appointments, setAppo
 }) {
   type T = "dashboard" | "masters" | "addMaster" | "appointments" | "users";
   const [tab, setTab] = useState<T>("dashboard");
+
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "smooth" });
+    document.querySelector(".content")?.scrollTo({ top: 0, behavior: "smooth" });
+  }, [tab]);
   const [showMasterPicker, setShowMasterPicker] = useState(false);
   const [fN, setFN] = useState(""); const [fE, setFE] = useState(""); const [fPh, setFPh] = useState(""); const [fPw, setFPw] = useState(""); const [fSp, setFSp] = useState(""); const [fDist, setFDist] = useState("Çankaya"); const [fBio, setFBio] = useState(""); const [fTel, setFTel] = useState(""); const [fCat, setFCat] = useState<MasterCategory>("tamir");
   const [selAppt, setSelAppt] = useState<Appointment | null>(null);
