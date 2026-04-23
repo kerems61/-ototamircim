@@ -381,6 +381,9 @@ const CSS = `
   /* Mobilde gizlenecekler */
   .nav-hide-mob{display:none;}
   @media(min-width:640px){.nav-hide-mob{display:flex;align-items:center;}}
+  .auth-btn-short{display:inline;}
+  .auth-btn-full{display:none;}
+  @media(min-width:640px){.auth-btn-short{display:none;}.auth-btn-full{display:inline;}}
 
   /* ── ROL ROZETLERİ ── */
   .rbadge{padding:.25rem .625rem;border-radius:99px;font-size:.6875rem;font-weight:700;letter-spacing:.04em;text-transform:uppercase;}
@@ -516,10 +519,10 @@ const CSS = `
 
   /* ── AUTH ── */
   .auth-outer{min-height:100dvh;display:flex;background:var(--bg);}
-  .auth-outer.compact{min-height:auto;}
+  .auth-outer.compact{min-height:auto;max-height:92dvh;overflow-y:auto;-webkit-overflow-scrolling:touch;}
   .auth-outer.compact .auth-deco,.auth-outer.compact .auth-mob-top{display:none!important;}
   .auth-outer.compact .auth-right{padding:0;}
-  .auth-outer.compact .auth-card{width:100%;max-width:none;border-radius:var(--r24);box-shadow:none;}
+  .auth-outer.compact .auth-card{width:100%;max-width:none;border-radius:var(--r24);box-shadow:none;padding:1.5rem 1.25rem 2rem;}
   .auth-deco{display:none;width:45%;background:linear-gradient(145deg,#060d20,#0c1838);border-right:1px solid var(--gb);flex-direction:column;justify-content:center;align-items:center;padding:3rem 2.5rem;position:relative;overflow:hidden;}
   @media(min-width:900px){.auth-deco{display:flex;}}
   .auth-deco-bg{position:absolute;inset:0;background:radial-gradient(ellipse 80% 60% at 30% 40%,rgba(37,99,235,.12),transparent 65%),radial-gradient(ellipse 60% 50% at 70% 70%,rgba(79,70,229,.1),transparent 60%);pointer-events:none;}
@@ -1108,19 +1111,11 @@ function CarHero() {
 // AUTH EKRANI
 // ══════════════════════════════════════════════════════════════════
 function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaultView = "login" }: { users: AppUser[]; setUsers: React.Dispatch<React.SetStateAction<AppUser[]>>; onLogin: (u: AppUser) => void; compact?: boolean; onClose?: () => void; defaultView?: "login" | "register" }) {
-  type V = "login" | "register" | "verify" | "forgot";
+  type V = "login" | "register" | "forgot";
   const [view, setView] = useState<V>(defaultView);
   const [lId, setLId] = useState(""); const [lPw, setLPw] = useState(""); const [showPw, setShowPw] = useState(false); const [lErr, setLErr] = useState("");
   const [rN, setRN] = useState(""); const [rE, setRE] = useState(""); const [rPh, setRPh] = useState(""); const [rPw, setRPw] = useState(""); const [rPw2, setRPw2] = useState(""); const [rSec, setRSec] = useState(""); const [rRole, setRRole] = useState<"customer" | "master">("customer"); const [rErr, setRErr] = useState("");
   const [fId, setFId] = useState(""); const [fAns, setFAns] = useState(""); const [fNPw, setFNPw] = useState(""); const [fStep, setFStep] = useState<"find"|"ans"|"newpw"|"done">("find"); const [fUser, setFUser] = useState<AppUser | null>(null); const [fErr, setFErr] = useState("");
-  const [vCode, setVCode] = useState(""); const [vEntered, setVEntered] = useState(""); const [vErr, setVErr] = useState(""); const [vCooldown, setVCooldown] = useState(0); const [vSending, setVSending] = useState(false); const [vSentAt, setVSentAt] = useState<Date | null>(null); const [vDemoMode, setVDemoMode] = useState(false);
-
-  // Geri sayım (kod tekrar gönder)
-  useEffect(() => {
-    if (vCooldown <= 0) return;
-    const t = setInterval(() => setVCooldown(c => Math.max(0, c - 1)), 1000);
-    return () => clearInterval(t);
-  }, [vCooldown]);
 
   const normEmail = (s: string) => s.trim().toLowerCase();
   const normPhone = (s: string) => s.replace(/[^\d]/g, "");
@@ -1134,30 +1129,7 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
     setLErr(""); onLogin(u);
   };
 
-  const sendVerificationCode = async (email: string, code: string): Promise<{ ok: boolean; error?: string }> => {
-    // EmailJS varsa mail gönder, yoksa demo modu (konsol + UI'da kod gösterilir).
-    const w = window as unknown as { emailjs?: { send: (svc: string, tpl: string, p: Record<string, string>, key: string) => Promise<unknown> }; EMAILJS_CONFIG?: { serviceId: string; templateId: string; publicKey: string } };
-    const cfg = w.EMAILJS_CONFIG;
-    if (!w.emailjs || !cfg?.serviceId || !cfg?.templateId || !cfg?.publicKey) {
-      console.info("[Demo] EMAILJS_CONFIG yapılandırılmamış. Kod ekranda gösteriliyor:", code);
-      return { ok: false };
-    }
-    try {
-      await w.emailjs.send(cfg.serviceId, cfg.templateId, {
-        to_email: email,
-        code,
-        app_name: "OtoTamircimOnline",
-        from_name: "OtoTamircimOnline",
-      }, cfg.publicKey);
-      return { ok: true };
-    } catch (err: unknown) {
-      const msg = (err as { text?: string; message?: string })?.text || (err as Error)?.message || "Mail gönderilemedi";
-      console.warn("EmailJS gönderimi başarısız:", err);
-      return { ok: false, error: msg };
-    }
-  };
-
-  const doStartRegister = async () => {
+  const doRegister = () => {
     const e = normEmail(rE);
     const p = normPhone(rPh);
     if (!rN || !e || !p || !rPw || !rSec) { setRErr("Tüm alanları doldurun."); return; }
@@ -1167,29 +1139,8 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
     if (rPw.length < 6) { setRErr("Şifre en az 6 karakter olmalı."); return; }
     if (users.find(u => normEmail(u.email) === e)) { setRErr("Bu e-posta zaten kayıtlı."); return; }
     if (users.find(u => normPhone(u.phone) === p)) { setRErr("Bu telefon numarası zaten kayıtlı."); return; }
-    setRErr(""); setVSending(true);
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setVCode(code); setVEntered(""); setVErr("");
-    const res = await sendVerificationCode(e, code);
-    setVSending(false); setVCooldown(60); setVSentAt(new Date()); setVDemoMode(!res.ok && !res.error);
-    setView("verify");
-    if (res.error) setVErr(`Mail gönderilemedi: ${res.error}. Lütfen tekrar deneyin.`);
-  };
-
-  const doResendCode = async () => {
-    if (vCooldown > 0 || vSending) return;
-    setVSending(true); setVErr("");
-    const code = Math.floor(100000 + Math.random() * 900000).toString();
-    setVCode(code); setVEntered("");
-    const res = await sendVerificationCode(normEmail(rE), code);
-    setVSending(false); setVCooldown(60); setVSentAt(new Date()); setVDemoMode(!res.ok && !res.error);
-    if (res.error) setVErr(`Mail gönderilemedi: ${res.error}.`);
-  };
-
-  const doVerifyAndRegister = () => {
-    if (vEntered.trim() !== vCode) { setVErr("Doğrulama kodu hatalı."); return; }
     const nu: AppUser = {
-      id: "u_" + uid(), name: rN.trim(), email: normEmail(rE), phone: normPhone(rPh),
+      id: "u_" + uid(), name: rN.trim(), email: e, phone: p,
       password: rPw, securityAnswer: rSec.trim().toLowerCase(), role: rRole,
       createdAt: new Date(), totalSpent: 0, appointmentCount: 0,
     };
@@ -1282,58 +1233,8 @@ function AuthScreen({ users, setUsers, onLogin, compact = false, onClose, defaul
             </div>
             {rRole === "master" && <div className="alert a-info" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>Usta hesabı admin onayına tabidir.</div>}
             {rErr && <div className="alert a-err" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>{rErr}</div>}
-            <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} disabled={vSending} onClick={doStartRegister}>
-              <Mail size={14}/>{vSending ? "Kod gönderiliyor..." : "Doğrulama Kodu Gönder"}
-            </button>
-          </>)}
-
-          {/* E-POSTA DOĞRULAMA */}
-          {view === "verify" && (<>
-            <div style={{ display: "flex", alignItems: "center", gap: ".625rem", marginBottom: "1.25rem" }}>
-              <button className="close-btn" onClick={() => setView("register")}><ArrowLeft size={14}/></button>
-              <h3 style={{ fontWeight: 700 }}>E-posta Doğrulama</h3>
-            </div>
-            {vSending ? (
-              <div style={{ textAlign: "center", padding: "1.5rem 1rem", marginBottom: "1rem" }}>
-                <div className="spinner" style={{ margin: "0 auto 1rem" }}/>
-                <div style={{ fontWeight: 700, marginBottom: ".25rem" }}>Mail gönderiliyor...</div>
-                <div style={{ fontSize: ".8125rem", color: "var(--t2)" }}><strong>{normEmail(rE)}</strong> adresine doğrulama kodu atılıyor</div>
-              </div>
-            ) : vDemoMode ? (
-              <div style={{ background: "rgba(245,158,11,.08)", border: "1px dashed rgba(245,158,11,.4)", borderRadius: "var(--r12)", padding: ".75rem 1rem", fontSize: ".8125rem", color: "#fbbf24", marginBottom: "1rem", lineHeight: 1.55 }}>
-                <strong>Demo modu:</strong> EmailJS yapılandırılmadı, gerçek mail gitmedi. Üretim için <code style={{ background: "rgba(0,0,0,.25)", padding: "1px 5px", borderRadius: 4 }}>src/main.tsx</code> içindeki EMAILJS_* değerlerini doldurun. <br/>
-                Ekrandaki kod: <strong style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1rem", letterSpacing: ".15em", color: "#fde68a" }}>{vCode}</strong>
-              </div>
-            ) : (
-              <div className="alert a-ok" style={{ marginBottom: "1rem" }}>
-                <Mail size={13}/>
-                <span>
-                  <strong>{normEmail(rE)}</strong> adresine 6 haneli doğrulama kodu gönderildi.
-                  {vSentAt && <span style={{ display: "block", fontSize: ".75rem", color: "var(--t3)", marginTop: ".125rem" }}>Gönderim: {vSentAt.toLocaleTimeString("tr-TR")} · Mail gelmediyse spam klasörünü kontrol edin.</span>}
-                </span>
-              </div>
-            )}
-            <div className="fg">
-              <label className="fl">6 Haneli Kod</label>
-              <input
-                className="fi"
-                placeholder="••••••"
-                value={vEntered}
-                onChange={e => setVEntered(e.target.value.replace(/\D/g, "").slice(0, 6))}
-                maxLength={6}
-                inputMode="numeric"
-                autoFocus
-                disabled={vSending}
-                style={{ fontFamily: "'JetBrains Mono',monospace", fontSize: "1.125rem", letterSpacing: ".35em", textAlign: "center" }}
-                onKeyDown={e => e.key === "Enter" && doVerifyAndRegister()}
-              />
-            </div>
-            {vErr && <div className="alert a-err" style={{ marginBottom: "1rem" }}><AlertCircle size={13}/>{vErr}</div>}
-            <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem", marginBottom: ".5rem" }} onClick={doVerifyAndRegister} disabled={vEntered.length !== 6 || vSending}>
-              <Check size={14}/>Doğrula & Hesabı Oluştur
-            </button>
-            <button className="btn btn-ghost btn-sm" style={{ width: "100%" }} onClick={doResendCode} disabled={vCooldown > 0 || vSending}>
-              {vSending ? "Gönderiliyor..." : vCooldown > 0 ? `Yeniden gönder (${vCooldown}sn)` : "Kodu Yeniden Gönder"}
+            <button className="btn btn-primary" style={{ width: "100%", padding: ".75rem" }} onClick={doRegister}>
+              <UserPlus size={14}/>Hesap Oluştur
             </button>
           </>)}
 
@@ -3081,8 +2982,10 @@ export default function App() {
             <button className="theme-btn nav-hide-mob" onClick={toggleTheme} title="Tema değiştir">
               {theme === "dark" ? "☀️ Açık" : "🌙 Koyu"}
             </button>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowAuth(true)} style={{ padding: ".3125rem .875rem" }}>
-              <User size={13}/>Giriş Yap / Kayıt
+            <button className="btn btn-primary btn-sm" onClick={() => setShowAuth(true)} style={{ padding: ".3125rem .875rem", whiteSpace: "nowrap" }}>
+              <User size={13}/>
+              <span className="auth-btn-short">Giriş</span>
+              <span className="auth-btn-full">Giriş Yap / Kayıt</span>
             </button>
           </div>
         </nav>
