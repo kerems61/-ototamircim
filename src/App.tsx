@@ -1838,14 +1838,14 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                     const tomorrowConfigured = !m.availability?.days?.length || m.availability.days.includes(DAYS[dayIdxFromJS(tomorrow.getDay())]);
                     return (
                       <div key={m.id} className="master-card" onClick={() => setSel(m)}>
-                        {distKm != null && <div className="dist-badge"><Navigation size={10}/>{distKm.toFixed(1)} km</div>}
                         <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", alignItems: "flex-start" }}>
                           <div className="avatar av-md" style={{ flexShrink: 0 }}>{m.avatar}</div>
                           <div style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
-                            <div style={{ display: "flex", alignItems: "center", gap: ".4rem", flexWrap: "wrap", marginBottom: ".125rem" }}>
-                              <div style={{ fontWeight: 700, fontSize: ".9375rem", textAlign: "left" }} className="ellipsis">{m.name}</div>
-                              {live && <span className="live-badge"><span className="live-dot"/>Şimdi Müsait</span>}
+                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", marginBottom: ".25rem" }}>
+                              <div style={{ fontWeight: 700, fontSize: ".9375rem", textAlign: "left", minWidth: 0, flex: 1 }} className="ellipsis">{m.name}</div>
+                              {distKm != null && <span style={{ flexShrink: 0, background: "rgba(16,185,129,.12)", border: "1px solid rgba(16,185,129,.28)", borderRadius: 6, padding: ".15rem .45rem", fontSize: ".6875rem", color: "var(--ok)", display: "inline-flex", alignItems: "center", gap: ".2rem", fontWeight: 600, whiteSpace: "nowrap" }}><Navigation size={10}/>{distKm.toFixed(1)} km</span>}
                             </div>
+                            {live && <div style={{ marginBottom: ".25rem" }}><span className="live-badge"><span className="live-dot"/>Şimdi Müsait</span></div>}
                             <div className="ellipsis" style={{ fontSize: ".8125rem", color: "var(--t2)", textAlign: "left", marginBottom: ".125rem" }}>{m.specialty || "—"}</div>
                             <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem", minWidth: 0, textAlign: "left" }}><MapPin size={10} style={{ flexShrink: 0 }}/><span className="ellipsis">{m.district}</span></div>
                             <div style={{ marginTop: ".4rem", textAlign: "left" }}>
