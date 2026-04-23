@@ -1841,10 +1841,7 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                         <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", alignItems: "flex-start" }}>
                           <div className="avatar av-md" style={{ flexShrink: 0 }}>{m.avatar}</div>
                           <div style={{ minWidth: 0, flex: 1, textAlign: "left" }}>
-                            <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: ".5rem", marginBottom: ".25rem" }}>
-                              <div style={{ fontWeight: 700, fontSize: ".9375rem", textAlign: "left", minWidth: 0, flex: 1 }} className="ellipsis">{m.name}</div>
-                              {distKm != null && <span style={{ flexShrink: 0, background: "rgba(16,185,129,.12)", border: "1px solid rgba(16,185,129,.28)", borderRadius: 6, padding: ".15rem .45rem", fontSize: ".6875rem", color: "var(--ok)", display: "inline-flex", alignItems: "center", gap: ".2rem", fontWeight: 600, whiteSpace: "nowrap" }}><Navigation size={10}/>{distKm.toFixed(1)} km</span>}
-                            </div>
+                            <div style={{ fontWeight: 700, fontSize: ".9375rem", textAlign: "left", marginBottom: ".25rem" }} className="ellipsis">{m.name}</div>
                             {live && <div style={{ marginBottom: ".25rem" }}><span className="live-badge"><span className="live-dot"/>Şimdi Müsait</span></div>}
                             <div className="ellipsis" style={{ fontSize: ".8125rem", color: "var(--t2)", textAlign: "left", marginBottom: ".125rem" }}>{m.specialty || "—"}</div>
                             <div style={{ fontSize: ".75rem", color: "var(--t3)", display: "flex", alignItems: "center", gap: ".2rem", minWidth: 0, textAlign: "left" }}><MapPin size={10} style={{ flexShrink: 0 }}/><span className="ellipsis">{m.district}</span></div>
@@ -1855,10 +1852,11 @@ function CustomerPage({ masters, user, setUsers, appointments, setAppointments, 
                             </div>
                           </div>
                         </div>
-                        <div style={{ display: "flex", gap: ".875rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
+                        <div style={{ display: "flex", gap: ".75rem", marginBottom: ".75rem", flexWrap: "wrap" }}>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><span style={{ color: "#fbbf24" }}>⭐</span><strong>{m.rating || "Yeni"}</strong></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Award size={12} style={{ color: "var(--ind)" }}/><strong>{m.completedJobs}</strong><span style={{ color: "var(--t2)" }}>iş</span></div>
                           <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem" }}><Package size={12} style={{ color: "var(--t3)" }}/><strong>{m.services.length}</strong><span style={{ color: "var(--t2)" }}>hizmet</span></div>
+                          {distKm != null && <div style={{ display: "flex", alignItems: "center", gap: ".3rem", fontSize: ".8125rem", color: "var(--ok)", background: "rgba(16,185,129,.1)", border: "1px solid rgba(16,185,129,.28)", borderRadius: 6, padding: ".1rem .4rem", fontWeight: 600 }}><Navigation size={11}/>{distKm.toFixed(1)} km</div>}
                         </div>
                         <button className="btn btn-primary" style={{ width: "100%", fontSize: ".8125rem", marginTop: "auto" }} onClick={e => { e.stopPropagation(); setSel(m); }}>Detay & Randevu →</button>
                       </div>
